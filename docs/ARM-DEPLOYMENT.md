@@ -198,4 +198,27 @@ docker info
 docker compose logs
 ```
 
-然后在项目 GitHub 页面提交 Issue。
+## 📞 技术支持
+
+如果在 ARM 设备上遇到部署问题，请提供以下信息：
+
+```bash
+# 系统信息
+uname -a
+cat /etc/os-release
+
+# 架构信息
+dpkg --print-architecture
+
+# Docker 信息
+docker version
+docker info
+
+# 错误日志
+docker compose logs
+
+# 端口信息（必需）
+echo "端口映射：" && grep ports docker-compose.yml
+```
+
+**端口映射**：默认 `11180:80`（主机 11180，容器 80）。

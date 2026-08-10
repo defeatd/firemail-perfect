@@ -171,7 +171,7 @@ chmod +x setup-firemail.sh
 ```
 请输入要使用的端口 (默认 80):
 ```
-- **默认端口 80**: 直接按回车，访问地址为 `http://IP/`
+- **默认端口 11180**: 直接按回车，访问地址为 `http://IP:11180/`
 - **自定义端口**: 输入端口号（如 `8080`），访问地址为 `http://IP:8080/`
 - **推荐**: 如果 80 端口被占用，使用 `8080` 或 `9610`
 
@@ -246,7 +246,7 @@ echo "环境变量文件已创建"
 
 ```bash
 # 使用 8080 端口示例
-sed -i 's/"80:80"/"8080:80"/' docker-compose.yml
+sed -i "s/\"80:80\"/\"$PORT:80\"/" docker-compose.yml
 
 # 验证修改
 grep "ports:" -A 1 docker-compose.yml
@@ -384,7 +384,7 @@ Error starting userland proxy: listen tcp4 0.0.0.0:80: bind: address already in 
 sudo netstat -tlnp | grep :80
 
 # 修改为其他端口
-sed -i 's/"80:80"/"8080:80"/' docker-compose.yml
+sed -i "s/\"80:80\"/\"$PORT:80\"/" docker-compose.yml
 
 # 重新启动
 docker compose up --build -d

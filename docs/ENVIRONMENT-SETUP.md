@@ -307,7 +307,7 @@ EOF
 
 # 修改端口配置
 if [ "$PORT" != "80" ]; then
-    sed -i "s/\"80:80\"/\"$PORT:80\"/" docker-compose.yml
+    sed -i "s/\"11180:80\"/\"$PORT:80\"/" docker-compose.yml
 fi
 
 echo "✅ 配置完成！"
