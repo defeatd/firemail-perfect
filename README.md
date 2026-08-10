@@ -1,345 +1,180 @@
-# 花火邮箱助手 (FireMail) 部署指南
+# 花火邮箱助手 (FireMail)
 
-项目仓库：`https://github.com/defeatd/firemail-perfect.git`
+多账号邮箱聚合管理系统：支持 Outlook（OAuth Device Code / Refresh Token）、IMAP、Gmail、QQ 邮箱，提供 Web 管理界面、批量导入、实时收信与邮件搜索。
 
-本文档提供 **花火邮箱助手（FireMail）** 的快速部署方法。如需详细的完整部署指南，请查看 **[📚 完整部署指南](docs/DEPLOYMENT-GUIDE.md)**。
+**仓库：** https://github.com/defeatd/firemail-perfect
 
 ---
 
-## 🚀 快速开始
+## 功能概览
 
-### 一键自动部署（推荐）
+| 能力 | 说明 |
+|------|------|
+| 多协议邮箱 | Outlook OAuth2、通用 IMAP、Gmail、QQ |
+| 账号管理 | 添加 / 编辑 / 批量导入 / 批量删除 / 导出 TXT |
+| 收信 | 单账号检查、批量收信、后台实时检查 |
+| Outlook 授权 | Device Code 重新授权、Token 自动续期 |
+| 邮件 | 列表、详情、HTML 渲染（DOMPurify）、附件下载、搜索 |
+| 用户与权限 | 注册（可关闭）、管理员用户管理、JWT 认证 |
+| 部署 | Docker 一键构建，Caddy 反代前端 + API + WebSocket |
+
+详细文档见 [`docs/`](docs/README.md)。
+
+---
+
+## 快速开始（推荐）
 
 ```bash
-# 1. 克隆项目
+# 1. 克隆
 git clone https://github.com/defeatd/firemail-perfect.git
 cd firemail-perfect
 
-# 2. 运行自动配置脚本
+# 2. 一键配置并启动（生成 JWT、写 .env、可选改端口）
 chmod +x setup-firemail.sh
 ./setup-firemail.sh
 
-# 3. 完成！访问 http://你的IP:端口/
+# 3. 浏览器访问
+#    http://你的服务器IP/          （默认端口 80）
+#    或 http://你的服务器IP:端口/  （若 setup 时改过端口）
 ```
 
-### 🔧 遇到问题？一键修复
+首次打开页面 → **注册**（第一个用户自动成为管理员）→ 登录使用。
 
-如果部署过程中遇到任何问题，运行故障排除脚本：
+### 部署出问题？
 
 ```bash
-# 自动诊断和修复常见问题
 chmod +x troubleshoot.sh
 ./troubleshoot.sh
 ```
 
-故障排除脚本会自动：
-- ✅ 检查 Docker 环境
-- ✅ 生成缺失的环境变量
-- ✅ 解决容器名冲突
-- ✅ 处理端口占用问题
-- ✅ 清理磁盘空间
-- ✅ 自动启动服务
-
-> 💡 **需要详细指导？** 查看 [📚 完整部署指南](docs/DEPLOYMENT-GUIDE.md) 获取从零开始的详细部署步骤。
+更完整的从零部署步骤：[docs/DEPLOYMENT-GUIDE.md](docs/DEPLOYMENT-GUIDE.md)
 
 ---
 
-## 📦 克隆项目
+## 手动配置
+
+### 1. 环境变量
 
 ```bash
-git clone https://github.com/defeatd/firemail-perfect.git
-cd firemail-perfect
+cp .env.example .env
+# 编辑 .env，至少设置：
+openssl rand -hex 32   # 生成后填入 JWT_SECRET_KEY
 ```
 
----
+| 变量 | 必需 | 说明 |
+|------|------|------|
+| `JWT_SECRET_KEY` | ✅ | JWT 签名密钥，生产环境必须自定义 |
+| `ALLOWED_ORIGINS` | 推荐 | CORS 允许来源，逗号分隔，需含实际访问 URL |
+| `TZ` | 否 | 时区，默认 `Asia/Shanghai` |
+| `OUTLOOK_TOKEN_REFRESH_INTERVAL` | 否 | Outlook Token 巡检间隔（秒），默认 1500 |
+| `OUTLOOK_TOKEN_RENEW_BEFORE` | 否 | 过期前多少秒续期，默认 600 |
 
-## 🔐 安全配置（必须）
+完整说明：[docs/ENVIRONMENT-SETUP.md](docs/ENVIRONMENT-SETUP.md)
 
-**重要：** 在启动服务前，必须配置以下安全参数：
+### 2. 端口（`docker-compose.yml`）
 
-### 🚀 快速配置（推荐）
+默认：
 
-使用自动配置脚本，一键完成所有设置：
-
-```bash
-# 运行自动配置脚本
-chmod +x setup-firemail.sh
-./setup-firemail.sh
-```
-
-脚本会自动：
-- 检测本机 IP 地址
-- 生成安全的 JWT 密钥
-- 配置 CORS 域名
-- 创建 .env 配置文件
-- 可选择立即启动服务
-
-### 🔧 手动配置
-
-如果需要手动配置，请按以下步骤：
-
-#### 1. 生成 JWT 密钥
-
-```bash
-# 生成随机 JWT 密钥
-openssl rand -hex 32
-```
-
-#### 2. 设置环境变量
-
-创建 `.env` 文件或直接设置环境变量：
-
-```bash
-# 方式一：创建 .env 文件
-cat > .env << EOF
-JWT_SECRET_KEY=你生成的32位随机密钥
-ALLOWED_ORIGINS=http://你的IP,http://你的IP:端口
-TZ=Asia/Shanghai
-EOF
-
-# 方式二：直接导出环境变量
-export JWT_SECRET_KEY="你生成的32位随机密钥"
-export ALLOWED_ORIGINS="http://你的域名,https://你的域名"
-```
-
-#### 3. 环境变量说明
-
-| 变量名 | 必需 | 说明 | 示例 |
-|--------|------|------|------|
-| `JWT_SECRET_KEY` | ✅ | JWT 签名密钥，必须是32位随机字符串 | `a1b2c3d4e5f6...` |
-| `ALLOWED_ORIGINS` | 推荐 | 允许的 CORS 域名，多个用逗号分隔 | `http://192.168.1.100:8080` |
-
-> 📚 **详细配置指南**：查看 [docs/ENVIRONMENT-SETUP.md](docs/ENVIRONMENT-SETUP.md) 了解完整的环境变量配置方法。
-
----
-
-## ⚙️ 修改配置（可选）
-
-默认情况下，项目会以 Docker Compose **本地构建镜像**并启动，核心配置在 `docker-compose.yml` 中。
-
-你可以按需修改：
-
-### 🌐 端口配置
-
-**默认端口**：80
 ```yaml
 ports:
-  - "80:80"  # 访问地址：http://IP/
+  - "80:80"   # 主机:容器 → 访问 http://IP/
 ```
 
-**自定义端口**：
+改成其他端口示例：
+
 ```yaml
 ports:
-  - "8080:80"  # 访问地址：http://IP:8080/
-  - "3000:80"  # 访问地址：http://IP:3000/
-  - "任意端口:80"  # 访问地址：http://IP:任意端口/
+  - "8080:80"    # http://IP:8080/
+  - "11180:80"   # http://IP:11180/
 ```
 
-### 📁 其他配置
+同时把 `.env` 里的 `ALLOWED_ORIGINS` 改成对应地址。
 
-- **数据与日志持久化目录**：默认挂载 `./data`、`./logs`
-- **时区**：默认 `Asia/Shanghai`
+> 若只绑定某网卡（如 Tailscale），可写成 `"100.x.x.x:11180:80"`，仅该 IP 可访问。
 
----
-
-## ▶️ 构建并启动服务
-
-在项目根目录执行：
+### 3. 启动
 
 ```bash
-# 确保已设置 JWT_SECRET_KEY 环境变量
 docker compose up --build -d
 ```
 
-### 🏗️ 多架构支持
+健康检查：`http://服务器IP:端口/api/health`
 
-FireMail 支持以下架构的部署：
+---
 
-- **AMD64** (x86_64) - Intel/AMD 处理器
-- **ARM64** (aarch64) - Apple M1/M2, 树莓派 4B+, AWS Graviton
-- **ARMv7** (armhf) - 树莓派 3B/3B+
+## 架构简述
 
-#### ARM 设备部署
+```
+浏览器
+  → Caddy(:80)
+       → 静态前端 (Vue3 + Element Plus)
+       → /api/*  → Flask(:5000)
+       → /ws     → WebSocket(:8765)
+  → SQLite 数据卷 ./data
+  → 日志 ./logs
+```
 
-对于 ARM 设备（如树莓派），可以直接使用标准命令：
+- 前端：`frontend/`（Vite + Vue3）
+- 后端：`backend/app.py` + `backend/utils/email/`
+- 反向代理：`Caddyfile`
+- 镜像构建：`Dockerfile`（多阶段：Node 构建前端 + Python 运行时）
+
+---
+
+## 常用命令
 
 ```bash
-# 自动检测架构并构建对应镜像
+docker compose logs -f      # 看日志
+docker compose restart      # 重启
+docker compose down         # 停止并移除容器
+git pull && docker compose up --build -d   # 更新代码后重建
+```
+
+---
+
+## 安全说明
+
+- 用户登录密码：PBKDF2-SHA256 哈希存储
+- 生产环境强制 `JWT_SECRET_KEY`，禁止默认密钥
+- 登录 / 注册接口限流；可配置 CORS
+- 邮箱列表 API 对 `password` / `access_token` 脱敏（密码需单独接口获取）
+- **不要**把 `.env`、`data/*.db`、`logs/` 提交到 Git（已在 `.gitignore`）
+
+历史安全审核文档：[docs/安全审核报告.md](docs/安全审核报告.md)（部分项已在后续版本修复，以当前代码为准）。
+
+---
+
+## 多架构 / ARM
+
+支持 `amd64` / `arm64` / `armv7`。一般直接：
+
+```bash
 docker compose up --build -d
 ```
 
-#### 手动多架构构建
-
-如果需要手动构建多架构镜像：
-
-```bash
-# 使用提供的构建脚本
-chmod +x build-multiarch.sh
-./build-multiarch.sh
-```
-
-或者使用 Docker Buildx：
-
-```bash
-# 创建多架构构建器
-docker buildx create --name firemail-builder --use
-
-# 构建多架构镜像
-docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 -t firemail:latest --load .
-```
-
-这会：
-
-- 构建前端（Vue3 + Element Plus）产物
-- 安装后端依赖并启动 Flask API + WebSocket 服务
-- 根据目标架构自动下载对应的 Caddy 二进制文件
-- 启动内置的 Caddy 作为反向代理与静态文件服务器
-- 应用所有安全配置（密码哈希、JWT 安全、CORS 限制等）
+专用说明：[docs/ARM-DEPLOYMENT.md](docs/ARM-DEPLOYMENT.md)，或使用 `./build-multiarch.sh`。
 
 ---
 
-## ✅ 启动完成
+## 文档索引
 
-部署成功后，你可以通过以下方式访问：
-
-### 🌐 Web 界面访问
-
-**默认端口 80：**
-- `http://服务器IP/`
-- `http://192.168.1.100/`（局域网）
-- `http://你的公网IP/`（公网）
-
-**自定义端口（如修改为 8080）：**
-- `http://服务器IP:8080/`
-- `http://192.168.1.100:8080/`
-
-### 🔍 健康检查
-
-- **默认端口**：`http://服务器IP/api/health`
-- **自定义端口**：`http://服务器IP:端口/api/health`
-
-### 📱 移动端访问
-
-FireMail 支持响应式设计，可以在手机浏览器中正常使用：
-- 在手机浏览器中输入相同的地址
-- 界面会自动适配移动端显示
-
-### 🔐 首次使用
-
-1. 访问 Web 界面
-2. 点击"注册"创建管理员账户
-3. 登录后即可开始使用邮箱管理功能
+| 文档 | 内容 |
+|------|------|
+| [docs/DEPLOYMENT-GUIDE.md](docs/DEPLOYMENT-GUIDE.md) | 完整部署 |
+| [docs/ENVIRONMENT-SETUP.md](docs/ENVIRONMENT-SETUP.md) | 环境变量 |
+| [docs/用户指南.md](docs/用户指南.md) | 使用说明 |
+| [docs/系统架构.md](docs/系统架构.md) | 架构 |
+| [docs/API接口文档.md](docs/API接口文档.md) | API |
+| [docs/README.md](docs/README.md) | 文档总目录 |
 
 ---
 
-## 🔧 常用命令
+## 故障排除（简要）
 
-停止服务：
-
-```bash
-docker compose down
-```
-
-查看日志：
-
-```bash
-docker compose logs -f
-```
-
-重启服务：
-
-```bash
-docker compose restart
-```
-
-更新服务（拉取最新代码后）：
-
-```bash
-git pull
-docker compose up --build -d
-```
+1. **启动失败**：检查 `.env` 是否含 `JWT_SECRET_KEY`；执行 `docker compose logs -f`
+2. **无法访问**：防火墙放行端口；`ALLOWED_ORIGINS` 是否包含当前访问 URL
+3. **端口冲突**：修改 `docker-compose.yml` 的 `ports` 左侧端口，或运行 `./troubleshoot.sh`
 
 ---
 
-## 🛡️ 安全特性
-
-本版本包含以下安全改进：
-
-- ✅ **密码安全**：使用 PBKDF2-SHA256 哈希存储密码
-- ✅ **JWT 安全**：强制要求自定义 JWT 密钥
-- ✅ **CORS 保护**：可配置允许的域名
-- ✅ **Cookie 安全**：生产环境启用 Secure 标志
-- ✅ **密码策略**：最少 8 位字符要求
-- ✅ **请求限制**：登录和注册接口限流保护
-- ✅ **安全响应头**：防止 XSS、点击劫持等攻击
-
----
-
-## 📱 界面特性
-
-- 🎨 **现代化设计**：圆润界面，渐变背景，玻璃态效果
-- 📱 **移动端适配**：响应式布局，抽屉式菜单
-- 🌙 **Element Plus**：完整的 Vue3 组件库支持
-- ⚡ **性能优化**：Vite 构建，快速加载
-
----
-
-## 🚨 故障排除
-
-### 启动失败
-
-1. **检查环境变量**：确保 `JWT_SECRET_KEY` 已设置
-2. **检查端口占用**：确保 80 端口未被占用
-3. **查看日志**：`docker compose logs -f` 查看详细错误
-
-### 无法访问
-
-1. **防火墙设置**：确保 80 端口已开放
-2. **CORS 配置**：检查 `ALLOWED_ORIGINS` 是否包含你的域名
-
-### ARM 架构问题
-
-1. **架构不匹配**：
-   ```bash
-   # 检查当前架构
-   uname -m
-   # 或
-   dpkg --print-architecture
-   ```
-
-2. **构建失败**：
-   ```bash
-   # 清理构建缓存
-   docker system prune -a
-
-   # 重新构建
-   docker compose up --build -d
-   ```
-
-3. **树莓派内存不足**：
-   ```bash
-   # 增加交换空间
-   sudo dphys-swapfile swapoff
-   sudo sed -i 's/CONF_SWAPSIZE=100/CONF_SWAPSIZE=1024/' /etc/dphys-swapfile
-   sudo dphys-swapfile setup
-   sudo dphys-swapfile swapon
-   ```
-
-4. **Docker Buildx 问题**：
-   ```bash
-   # 安装/更新 Docker Buildx
-   docker buildx install
-
-   # 检查支持的平台
-   docker buildx ls
-   ```
-
----
-
-## 📚 项目文档
-
-更多文档请见：`docs/README.md`
-
----
-
-欢迎提交 Issue / PR！
+欢迎提交 Issue / PR。

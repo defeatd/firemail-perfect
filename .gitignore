@@ -88,3 +88,8 @@ backup_*/
 .windsurfrules
 AGENTS.md
 CLAUDE.md
+
+# 本机私有 compose 覆盖与备份
+docker-compose.override.yml
+docker-compose.yml.bak
+docker-compose.yml.bak2

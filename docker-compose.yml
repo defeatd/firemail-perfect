@@ -7,8 +7,9 @@ services:
     container_name: firemail
     restart: unless-stopped
     ports:
-      # 仅绑定 Tailscale IP，公网无法直接访问
-      - "100.80.238.98:11180:80"
+      # 主机端口:容器端口（容器内 Caddy 监听 80）
+      # 修改左侧端口即可，例如 "8080:80"、"11180:80"
+      - "80:80"
     volumes:
       - ./data:/app/backend/data
       - ./logs:/app/logs
@@ -21,7 +22,7 @@ services:
       - WS_PORT=8765
       - FLASK_ENV=production
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:?请设置 JWT_SECRET_KEY 环境变量}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:11180,http://127.0.0.1:11180}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost,http://127.0.0.1,http://localhost:80}
       # Outlook token 自动续期（秒）
       - OUTLOOK_TOKEN_REFRESH_INTERVAL=${OUTLOOK_TOKEN_REFRESH_INTERVAL:-1500}
       - OUTLOOK_TOKEN_RENEW_BEFORE=${OUTLOOK_TOKEN_RENEW_BEFORE:-600}
