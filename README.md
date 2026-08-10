@@ -33,9 +33,8 @@ cd firemail-perfect
 chmod +x setup-firemail.sh
 ./setup-firemail.sh
 
-# 3. 浏览器访问
-#    http://你的服务器IP/          （默认端口 80）
-#    或 http://你的服务器IP:端口/  （若 setup 时改过端口）
+# 3. 浏览器访问（默认端口 11180）
+#    http://你的服务器IP:11180/
 ```
 
 首次打开页面 → **注册**（第一个用户自动成为管理员）→ 登录使用。
@@ -77,15 +76,15 @@ openssl rand -hex 32   # 生成后填入 JWT_SECRET_KEY
 
 ```yaml
 ports:
-  - "80:80"   # 主机:容器 → 访问 http://IP/
+  - "11180:80"   # 主机:容器 → 访问 http://IP:11180/
 ```
 
 改成其他端口示例：
 
 ```yaml
 ports:
+  - "80:80"      # http://IP/
   - "8080:80"    # http://IP:8080/
-  - "11180:80"   # http://IP:11180/
 ```
 
 同时把 `.env` 里的 `ALLOWED_ORIGINS` 改成对应地址。

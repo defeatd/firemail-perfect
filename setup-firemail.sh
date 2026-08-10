@@ -28,8 +28,8 @@ echo "检测到本机 IP: $LOCAL_IP"
 
 # 询问端口
 echo ""
-read -p "请输入要使用的端口 (默认 80): " PORT
-PORT=${PORT:-80}
+read -p "请输入要使用的端口 (默认 11180): " PORT
+PORT=${PORT:-11180}
 
 # 验证端口
 if ! [[ "$PORT" =~ ^[0-9]+$ ]] || [ "$PORT" -lt 1 ] || [ "$PORT" -gt 65535 ]; then
@@ -92,11 +92,18 @@ WS_PORT=8765
 FLASK_ENV=production
 EOF
 
-# 修改端口配置
-if [ "$PORT" != "80" ]; then
+# 修改端口配置（默认 compose 为 11180:80）
+if [ "$PORT" != "11180" ]; then
     echo "🔧 修改端口配置..."
     if [ -f "docker-compose.yml" ]; then
-        sed -i.bak "s/\"80:80\"/\"$PORT:80\"/" docker-compose.yml
+        # 兼容默认 11180:80 以及旧写法 80:80
+        if grep -q '"11180:80"' docker-compose.yml; then
+            sed -i.bak "s/\"11180:80\"/\"$PORT:80\"/" docker-compose.yml
+        elif grep -q '"80:80"' docker-compose.yml; then
+            sed -i.bak "s/\"80:80\"/\"$PORT:80\"/" docker-compose.yml
+        else
+            sed -i.bak -E "s/\"[0-9]+:80\"/\"$PORT:80\"/" docker-compose.yml
+        fi
         echo "端口已修改为: $PORT"
     else
         echo "⚠️  警告: 未找到 docker-compose.yml 文件"
@@ -169,6 +176,6 @@ fi
 echo ""
 echo "🎯 配置文件已保存:"
 echo "   .env - 环境变量配置"
-if [ "$PORT" != "80" ]; then
+if [ "$PORT" != "11180" ]; then
     echo "   docker-compose.yml.bak - 原始配置备份"
 fi
