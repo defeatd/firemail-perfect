@@ -1,0 +1,18 @@
+Flask==2.3.3
+Flask-Cors==4.0.0
+Flask-Limiter==3.5.0
+websockets==11.0.3
+requests==2.31.0
+beautifulsoup4==4.12.2
+chardet==5.2.0
+importlib-metadata==6.8.0
+Werkzeug==2.3.7
+PyJWT==2.8.0
+# 邮件解析相关库
+extract-msg>=0.41.0
+mail-parser>=3.15.0
+# talon在部分环境下需编译依赖，暂时移除为可选
+# talon>=1.4.4
+eml-parser>=1.17.0
+# 兼容构建环境，避免cchardet编译失败，使用纯Python检测库
+# cchardet>=0.3.5

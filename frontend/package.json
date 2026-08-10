@@ -1,0 +1,37 @@
+{
+  "name": "FireMail",
+  "version": "1.0.0",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/defeatd/firemail-perfect.git"
+  },
+  "homepage": "https://github.com/defeatd/firemail-perfect",
+  "scripts": {
+    "dev": "vite",
+    "dev:port": "node -e \"console.log('启动前端开发服务器，端口:', process.env.VITE_PORT || 3000)\" && npx vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
+    "axios": "^1.6.2",
+    "dayjs": "^1.11.13",
+    "dompurify": "^3.2.5",
+    "element-plus": "^2.9.7",
+    "jwt-decode": "^4.0.0",
+    "pinia": "^2.1.7",
+    "uuid": "^9.0.1",
+    "vue": "^3.4.15",
+    "vue-router": "^4.2.5",
+    "vuex": "^4.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.6.2",
+    "eslint": "^8.49.0",
+    "eslint-plugin-vue": "^9.17.0",
+    "sass": "^1.68.0",
+    "vite": "^4.5.1"
+  }
+}

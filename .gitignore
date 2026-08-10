@@ -1,0 +1,90 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+.venv/
+venv/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Vue / Node
+.DS_Store
+node_modules/
+frontend/dist/
+frontend/node_modules/
+
+# Local Netlify folder
+.netlify
+
+# 环境变量与密钥（切勿提交）
+.env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 日志
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log
+FireMail.log
+
+# 数据库与运行时数据（含邮箱密码 / OAuth token）
+data/
+backend/data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# 临时文件
+temp/
+tmp/
+*.bak
+*.backup
+*.backup_*
+
+# 本地备份目录（体积大，一般不入库）
+backup_*/
+
+# Editor directories and files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 杂项
+.trae/
+.grok/
+# 本地 AI/编辑器规则与会话（不必入库）
+.claude/
+.aider*
+.clinerules
+.cursorrules
+.windsurfrules
+AGENTS.md
+CLAUDE.md
