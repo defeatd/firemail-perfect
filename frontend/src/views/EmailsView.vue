@@ -79,35 +79,14 @@
           >
             <template #default="scope">
               <div class="email-cell">
-                <div class="email-main">
-                  <button
-                    type="button"
-                    class="email-text email-copyable"
-                    :title="`点击复制：${scope.row.email}`"
-                    @click.stop="copyEmailAddress(scope.row.email)"
-                  >
-                    {{ scope.row.email }}
-                  </button>
-                  <div class="email-meta-row">
-                    <el-tag
-                      v-if="(scope.row.mail_type || 'outlook') === 'outlook'"
-                      size="small"
-                      class="auth-inline-tag"
-                      :class="authStatusClass(scope.row)"
-                    >
-                      {{ authStatusLabel(scope.row) }}
-                    </el-tag>
-                    <el-button
-                      link
-                      type="primary"
-                      size="small"
-                      class="email-copy-btn"
-                      :icon="CopyDocument"
-                      title="复制邮箱"
-                      @click.stop="copyEmailAddress(scope.row.email)"
-                    />
-                  </div>
-                </div>
+                <button
+                  type="button"
+                  class="email-text email-copyable"
+                  :title="`点击复制：${scope.row.email}`"
+                  @click.stop="copyEmailAddress(scope.row.email)"
+                >
+                  {{ scope.row.email }}
+                </button>
               </div>
             </template>
           </el-table-column>
@@ -753,8 +732,7 @@ import {
   Message,
   View,
   Hide,
-  InfoFilled,
-  CopyDocument
+  InfoFilled
 } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import DOMPurify from 'dompurify'
@@ -2182,17 +2160,8 @@ onUnmounted(() => {
   gap: 0;
   min-width: 0;
   width: 100%;
-  max-width: 220px; /* 防止邮箱列视觉上无限变宽 */
+  max-width: 220px;
   margin: 0 auto;
-}
-
-.email-main {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  width: 100%;
 }
 
 .email-text {
@@ -2223,25 +2192,6 @@ button.email-copyable:hover {
   color: var(--primary-dark);
   text-decoration: underline;
   text-underline-offset: 2px;
-}
-
-.email-meta-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.email-copy-btn {
-  padding: 0 2px !important;
-  height: 20px !important;
-  min-height: 20px !important;
-  color: var(--text-button-muted) !important;
-}
-
-.email-copy-btn:hover {
-  color: var(--primary-dark) !important;
 }
 
 /* 类型列：贴合内容，不抢表格剩余宽度 */
