@@ -65,7 +65,7 @@
           <el-table-column
             prop="email"
             label="邮箱地址"
-            min-width="140"
+            :width="emailColumnWidth"
             sortable="custom"
             class-name="email-column"
           >
@@ -805,24 +805,41 @@ const getMailTypeColor = (type) => {
   return mailTypes[type]?.color || 'default'
 }
 
-// 类型列宽按当前数据内容自适应（避免 min-width 被表格剩余空间撑得很宽）
+// 文本宽度估算（全角 / 半角），用于列宽自适应
+const measureTextUnits = (text) => {
+  let units = 0
+  for (const ch of String(text || '')) {
+    units += /[\u1100-\uFFFF]/.test(ch) ? 1.05 : 0.58
+  }
+  return units
+}
+
+// 类型列：按内容贴合，不吃表格剩余宽度
 const typeColumnWidth = computed(() => {
   const labels = (sortedEmails.value || []).map((e) =>
     getMailTypeName(e.mail_type || 'outlook')
   )
-  labels.push('类型') // 表头
+  labels.push('类型')
   let maxUnits = 2
   for (const label of labels) {
-    let units = 0
-    for (const ch of String(label)) {
-      // 中日韩等全角字符按 1.05 单位，ASCII 按 0.6
-      units += /[\u1100-\uFFFF]/.test(ch) ? 1.05 : 0.6
-    }
-    if (units > maxUnits) maxUnits = units
+    maxUnits = Math.max(maxUnits, measureTextUnits(label))
   }
-  // 左右 padding + 排序图标预留，限制上下限防止极端值
   const px = Math.ceil(maxUnits * 14 + 36)
   return Math.min(Math.max(px, 72), 168)
+})
+
+// 邮箱列：按内容自适应；过长地址在列内换行，不把整列撑满表格
+const emailColumnWidth = computed(() => {
+  const emails = (sortedEmails.value || []).map((e) => String(e?.email || ''))
+  emails.push('邮箱地址')
+  let maxUnits = measureTextUnits('邮箱地址')
+  for (const email of emails) {
+    // 超过约 22 个半角单位的部分靠换行展示，列宽不再继续加
+    maxUnits = Math.max(maxUnits, Math.min(measureTextUnits(email), 22))
+  }
+  // 小号正文字号 + 复制按钮/状态标签行的左右边距
+  const px = Math.ceil(maxUnits * 8.5 + 32)
+  return Math.min(Math.max(px, 128), 200)
 })
 
 // 添加邮箱表单
