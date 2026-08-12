@@ -65,8 +65,7 @@
           <el-table-column
             prop="email"
             label="邮箱地址"
-            min-width="150"
-            width="190"
+            min-width="140"
             sortable="custom"
             class-name="email-column"
           >
@@ -107,7 +106,7 @@
           <el-table-column
             prop="mail_type"
             label="类型"
-            min-width="140"
+            :width="typeColumnWidth"
             sortable="custom"
             class-name="type-column"
           >
@@ -805,6 +804,26 @@ const getMailTypeName = (type) => {
 const getMailTypeColor = (type) => {
   return mailTypes[type]?.color || 'default'
 }
+
+// 类型列宽按当前数据内容自适应（避免 min-width 被表格剩余空间撑得很宽）
+const typeColumnWidth = computed(() => {
+  const labels = (sortedEmails.value || []).map((e) =>
+    getMailTypeName(e.mail_type || 'outlook')
+  )
+  labels.push('类型') // 表头
+  let maxUnits = 2
+  for (const label of labels) {
+    let units = 0
+    for (const ch of String(label)) {
+      // 中日韩等全角字符按 1.05 单位，ASCII 按 0.6
+      units += /[\u1100-\uFFFF]/.test(ch) ? 1.05 : 0.6
+    }
+    if (units > maxUnits) maxUnits = units
+  }
+  // 左右 padding + 排序图标预留，限制上下限防止极端值
+  const px = Math.ceil(maxUnits * 14 + 36)
+  return Math.min(Math.max(px, 72), 168)
+})
 
 // 添加邮箱表单
 const addEmailForm = ref({
@@ -2201,9 +2220,16 @@ button.email-copyable:hover {
   color: var(--primary-dark) !important;
 }
 
-/* 类型列：自适应完整显示 */
+/* 类型列：贴合内容，不抢表格剩余宽度 */
 .email-table :deep(.type-column .cell) {
   white-space: nowrap;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.email-table :deep(.type-column .cell) {
+  display: flex;
+  align-items: center;
 }
 
 /* 增强按钮样式 */
