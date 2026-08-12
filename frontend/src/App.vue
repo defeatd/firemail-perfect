@@ -384,30 +384,64 @@ body {
   gap: 0.5rem;
 }
 
-/* Desktop Nav */
+/* Desktop Nav：选项与上下分隔线留白，文字/图标垂直居中 */
 .desktop-nav {
   background: var(--card-bg);
   border-bottom: 1px solid var(--border-color);
+  padding: 8px 0;
 }
 
 .desktop-nav .el-menu {
   max-width: 1400px;
   margin: 0 auto;
-  border: none;
+  border: none !important;
   display: flex;
   justify-content: center;
+  align-items: center;
+  height: auto !important;
+  background: transparent !important;
 }
 
 .desktop-nav .el-menu-item {
-  height: 40px;
-  line-height: 40px;
-  border-radius: 8px;
-  margin: 0 2px;
+  height: 36px !important;
+  line-height: 1 !important;
+  border-radius: 8px !important;
+  margin: 0 4px !important;
+  padding: 0 14px !important;
+  border-bottom: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px;
+  float: none !important;
+  box-sizing: border-box;
+}
+
+.desktop-nav .el-menu-item .el-icon {
+  margin: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.desktop-nav .el-menu-item span {
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.desktop-nav .el-menu-item:hover,
+.desktop-nav .el-menu-item:focus {
+  border-bottom: none !important;
+  background: var(--neutral-100) !important;
+  color: var(--neutral-800) !important;
 }
 
 .desktop-nav .el-menu-item.is-active {
-  background: var(--primary-soft);
-  color: var(--primary-dark);
+  background: var(--primary-soft) !important;
+  color: var(--primary-dark) !important;
+  border-bottom: none !important;
+  font-weight: 560;
 }
 
 /* Mobile Drawer */

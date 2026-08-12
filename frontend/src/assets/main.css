@@ -214,26 +214,40 @@
 .el-menu--horizontal {
   background: transparent !important;
   border-bottom: none !important;
+  height: auto !important;
 }
 
 .el-menu--horizontal > .el-menu-item {
   color: var(--neutral-500) !important;
   border-bottom: none !important;
   border-radius: 8px !important;
-  margin: 0 2px !important;
-  height: 40px !important;
-  line-height: 40px !important;
+  margin: 0 4px !important;
+  height: 36px !important;
+  line-height: 1 !important;
+  padding: 0 14px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px;
+  float: none !important;
 }
 
-.el-menu--horizontal > .el-menu-item:hover {
+.el-menu--horizontal > .el-menu-item .el-icon {
+  margin: 0 !important;
+}
+
+.el-menu--horizontal > .el-menu-item:not(.is-disabled):hover,
+.el-menu--horizontal > .el-menu-item:not(.is-disabled):focus {
   background: var(--neutral-100) !important;
   color: var(--neutral-800) !important;
+  border-bottom: none !important;
 }
 
 .el-menu--horizontal > .el-menu-item.is-active {
   background: var(--primary-soft) !important;
   color: var(--primary-dark) !important;
   font-weight: 560;
+  border-bottom: none !important;
 }
 
 .el-table {
