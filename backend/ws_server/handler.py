@@ -26,6 +26,8 @@ def _serialize_email(email_row):
     data = dict(email_row)
     if data.get('password'):
         data['password'] = '******'
+    if data.get('refresh_token'):
+        data['refresh_token'] = '******'
     if 'access_token' in data:
         data['access_token'] = None
     return data
@@ -406,7 +408,39 @@ class WebSocketHandler:
                         'message': 'Outlook邮箱需要提供Client ID和Refresh Token'
                     }))
                     return
+                # 与 HTTP 路径一致：入库前校验 OAuth token
+                try:
+                    from utils.email.outlook import OutlookMailHandler
+                    token_result = OutlookMailHandler.refresh_access_token(refresh_token, client_id)
+                    if not token_result.get('success'):
+                        err = token_result.get('error') or token_result.get('error_code') or '未知错误'
+                        await websocket.send(json.dumps({
+                            'type': 'error',
+                            'message': f'Outlook Token 无效，无法添加: {err}',
+                            'need_reauth': bool(token_result.get('need_reauth')),
+                        }))
+                        return
+                    refresh_token = token_result.get('refresh_token') or refresh_token
+                    access_token = token_result.get('access_token')
+                except Exception as e:
+                    logger.error(f"校验 Outlook token 失败: {e}")
+                    await websocket.send(json.dumps({
+                        'type': 'error',
+                        'message': f'校验 Outlook Token 失败: {str(e)}'
+                    }))
+                    return
+
                 email_id = self.db.add_email(user_id, email, password, client_id, refresh_token, mail_type)
+                if email_id and access_token:
+                    try:
+                        self.db.update_email_token(
+                            email_id,
+                            access_token,
+                            refresh_token=refresh_token,
+                            expires_in=token_result.get('expires_in'),
+                        )
+                    except Exception as e:
+                        logger.warning(f"保存初始 access_token 失败: {e}")
             else:  # imap类型
                 email_id = self.db.add_email(
                     user_id, 

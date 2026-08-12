@@ -125,35 +125,49 @@
               <span v-else class="text-muted">—</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" fixed="right" width="340" class-name="ops-column">
+          <el-table-column label="操作" fixed="right" width="228" class-name="ops-column">
             <template #default="scope">
               <div class="action-buttons">
-                <el-button
-                  type="primary"
-                  size="small"
-                  class="btn-check"
-                  :disabled="isEmailProcessing(scope.row)"
-                  @click="handleCheck(scope.row)"
-                >
-                  {{ getEmailActionText(scope.row) }}
-                </el-button>
-                <el-button
-                  v-if="(scope.row.mail_type || 'outlook') === 'outlook'"
-                  size="small"
-                  class="btn-reauth"
-                  @click="openDeviceReauth(scope.row)"
-                >
-                  重新授权
-                </el-button>
-                <el-button size="small" @click="handleViewMails(scope.row)">
-                  查看
-                </el-button>
-                <el-button size="small" @click="handleEdit(scope.row)">
-                  编辑
-                </el-button>
-                <el-button size="small" type="danger" plain @click="handleDelete(scope.row)">
-                  删除
-                </el-button>
+                <div class="action-row">
+                  <el-button
+                    size="small"
+                    class="btn-action"
+                    :disabled="isEmailProcessing(scope.row)"
+                    @click="handleCheck(scope.row)"
+                  >
+                    {{ getEmailActionText(scope.row) }}
+                  </el-button>
+                  <el-button
+                    type="primary"
+                    size="small"
+                    class="btn-action btn-view"
+                    @click="handleViewMails(scope.row)"
+                  >
+                    查看邮件
+                  </el-button>
+                </div>
+                <div class="action-row">
+                  <el-button size="small" class="btn-action" @click="handleEdit(scope.row)">
+                    编辑
+                  </el-button>
+                  <el-button
+                    v-if="(scope.row.mail_type || 'outlook') === 'outlook'"
+                    size="small"
+                    class="btn-action"
+                    @click="openDeviceReauth(scope.row)"
+                  >
+                    重新授权
+                  </el-button>
+                  <el-button
+                    size="small"
+                    type="danger"
+                    plain
+                    class="btn-action btn-delete"
+                    @click="handleDelete(scope.row)"
+                  >
+                    删除
+                  </el-button>
+                </div>
               </div>
             </template>
           </el-table-column>
@@ -198,24 +212,44 @@
             </div>
 
             <div class="email-card-actions">
-              <el-button
-                type="primary"
-                size="small"
-                :disabled="isEmailProcessing(email)"
-                @click="handleCheck(email)"
-              >
-                {{ getEmailActionText(email) }}
-              </el-button>
-              <el-button
-                v-if="(email.mail_type || 'outlook') === 'outlook'"
-                size="small"
-                @click="openDeviceReauth(email)"
-              >
-                重新授权
-              </el-button>
-              <el-button size="small" @click="handleViewMails(email)">查看</el-button>
-              <el-button size="small" @click="handleEdit(email)">编辑</el-button>
-              <el-button size="small" type="danger" plain @click="handleDelete(email)">删除</el-button>
+              <div class="action-row">
+                <el-button
+                  size="small"
+                  class="btn-action"
+                  :disabled="isEmailProcessing(email)"
+                  @click="handleCheck(email)"
+                >
+                  {{ getEmailActionText(email) }}
+                </el-button>
+                <el-button
+                  type="primary"
+                  size="small"
+                  class="btn-action btn-view"
+                  @click="handleViewMails(email)"
+                >
+                  查看邮件
+                </el-button>
+              </div>
+              <div class="action-row">
+                <el-button size="small" class="btn-action" @click="handleEdit(email)">编辑</el-button>
+                <el-button
+                  v-if="(email.mail_type || 'outlook') === 'outlook'"
+                  size="small"
+                  class="btn-action"
+                  @click="openDeviceReauth(email)"
+                >
+                  重新授权
+                </el-button>
+                <el-button
+                  size="small"
+                  type="danger"
+                  plain
+                  class="btn-action btn-delete"
+                  @click="handleDelete(email)"
+                >
+                  删除
+                </el-button>
+              </div>
             </div>
           </div>
 
@@ -833,7 +867,20 @@ const selectedMail = ref(null)
 const emails = computed(() => emailsStore.emails)
 const loading = computed(() => emailsStore.loading)
 const currentEmail = computed(() => emailsStore.getEmailById(emailsStore.currentEmailId))
-const mailRecords = computed(() => emailsStore.currentMailRecords)
+// 按接收时间由新到旧（兼容带时区的 stored 字符串）
+const mailRecords = computed(() => {
+  const list = Array.isArray(emailsStore.currentMailRecords)
+    ? [...emailsStore.currentMailRecords]
+    : []
+  return list.sort((a, b) => {
+    const ta = a?.received_time ? dayjs(a.received_time).valueOf() : 0
+    const tb = b?.received_time ? dayjs(b.received_time).valueOf() : 0
+    if (Number.isNaN(ta) && Number.isNaN(tb)) return 0
+    if (Number.isNaN(ta)) return 1
+    if (Number.isNaN(tb)) return -1
+    return tb - ta
+  })
+})
 const hasSelectedEmails = computed(() => emailsStore.hasSelectedEmails)
 
 // 排序状态（Element Plus: 'ascending' | 'descending' | null）
@@ -1026,29 +1073,45 @@ const getEmailsForExport = () => {
   return list
 }
 
-const getExportPassword = async (row) => {
-  if (row?.password && row.password !== '******') {
-    return String(row.password)
+const getExportCredentials = async (row) => {
+  const creds = {
+    password: '',
+    client_id: String(row?.client_id ?? ''),
+    refresh_token: ''
+  }
+
+  // 列表已脱敏时，从专用接口按需拉取敏感字段
+  const needFetch =
+    !row?.password ||
+    row.password === '******' ||
+    (row?.mail_type === 'outlook' &&
+      (!row.refresh_token || row.refresh_token === '******'))
+
+  if (!needFetch) {
+    creds.password = String(row.password || '')
+    creds.refresh_token = String(row.refresh_token || '')
+    return creds
   }
 
   try {
     const result = await emailsStore.getEmailPassword(row.id)
-    return result?.password ? String(result.password) : ''
+    creds.password = result?.password ? String(result.password) : ''
+    if (result?.client_id) creds.client_id = String(result.client_id)
+    if (result?.refresh_token) creds.refresh_token = String(result.refresh_token)
   } catch (error) {
-    console.warn('获取邮箱密码失败（将导出为空）:', error)
-    return ''
+    console.warn('获取邮箱凭证失败（将导出为空）:', error)
   }
+  return creds
 }
 
 const formatOutlook4PartLine = async (row) => {
   const email = String(row?.email ?? '')
-  const password = await getExportPassword(row)
-
+  const creds = await getExportCredentials(row)
   const isOutlook = row?.mail_type === 'outlook'
-  const clientId = isOutlook ? String(row?.client_id ?? '') : ''
-  const refreshToken = isOutlook ? String(row?.refresh_token ?? '') : ''
+  const clientId = isOutlook ? creds.client_id : ''
+  const refreshToken = isOutlook ? creds.refresh_token : ''
 
-  return [email, password, clientId, refreshToken].join('----')
+  return [email, creds.password, clientId, refreshToken].join('----')
 }
 
 const downloadTextFile = (filename, content) => {
@@ -1659,12 +1722,38 @@ const formatFileSize = (bytes) => {
 }
 
 // 添加编辑按钮的处理函数
-const handleEdit = (email) => {
+const handleEdit = async (email) => {
   // 确保use_ssl是布尔值
   const emailData = { ...email }
-  if (emailData.mail_type === 'imap') {
+  if (emailData.mail_type === 'imap' || emailData.mail_type === 'gmail' || emailData.mail_type === 'qq') {
     emailData.use_ssl = Boolean(emailData.use_ssl)
   }
+
+  // 列表接口已脱敏 password / refresh_token，编辑时按需拉取真实凭证
+  const needsSecrets =
+    !emailData.password ||
+    emailData.password === '******' ||
+    ((emailData.mail_type || 'outlook') === 'outlook' &&
+      (!emailData.refresh_token || emailData.refresh_token === '******'))
+
+  if (needsSecrets && emailData.id) {
+    try {
+      const result = await emailsStore.getEmailPassword(emailData.id)
+      if (result?.password) emailData.password = result.password
+      if (result?.refresh_token) emailData.refresh_token = result.refresh_token
+      if (result?.client_id) emailData.client_id = result.client_id
+    } catch (error) {
+      console.warn('加载邮箱凭证失败:', error)
+      ElMessage.warning('加载邮箱敏感信息失败，请手动填写需要修改的字段')
+      if (!emailData.password || emailData.password === '******') {
+        emailData.password = ''
+      }
+      if (!emailData.refresh_token || emailData.refresh_token === '******') {
+        emailData.refresh_token = ''
+      }
+    }
+  }
+
   editForm.value = emailData
   editDialogVisible.value = true
 }
@@ -1813,9 +1902,12 @@ const submitEditForm = async () => {
     // 准备提交的数据
     const formData = { ...editForm.value }
 
-    // 如果密码仍然是默认的星号，则不发送密码更新
+    // 如果密码 / refresh_token 仍是脱敏占位，则不发送更新
     if (formData.password === '******') {
       delete formData.password
+    }
+    if (formData.refresh_token === '******') {
+      delete formData.refresh_token
     }
 
     const loading = ElLoading.service({
@@ -2075,44 +2167,79 @@ onUnmounted(() => {
 
 .action-buttons {
   display: flex;
-  flex-wrap: nowrap;
+  flex-direction: column;
   gap: 6px;
-  justify-content: flex-start;
-  align-items: center;
+  width: 100%;
+  padding: 2px 0;
+}
+
+.action-row {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  align-items: stretch;
+}
+
+/* 统一操作按钮尺寸与默认外观 */
+.action-row .btn-action.el-button {
+  margin: 0 !important;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 28px !important;
+  padding: 0 6px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  border-radius: 6px !important;
+  line-height: 26px !important;
+  box-sizing: border-box !important;
   white-space: nowrap;
 }
 
-.action-buttons .el-button {
-  margin: 0 !important;
-  padding: 5px 10px !important;
-  height: 28px !important;
-  font-size: 12px !important;
+/* 默认：检查 / 编辑 / 重新授权 —— 统一浅底描边 */
+.action-row .btn-action.el-button:not(.btn-view):not(.btn-delete) {
+  background: #fff !important;
+  border: 1px solid #e0dbd0 !important;
+  color: #5c574e !important;
+}
+
+.action-row .btn-action.el-button:not(.btn-view):not(.btn-delete):hover:not(:disabled) {
+  background: #f7f4ec !important;
+  border-color: #d0c9ba !important;
+  color: #3d3a34 !important;
+}
+
+.action-row .btn-action.el-button:not(.btn-view):not(.btn-delete).is-disabled,
+.action-row .btn-action.el-button:not(.btn-view):not(.btn-delete):disabled {
+  opacity: 0.55;
+  background: #f5f3ee !important;
+  color: #9a958c !important;
+}
+
+/* 仅「查看邮件」主色突出 */
+.action-row .btn-action.btn-view.el-button {
+  background: var(--primary-color) !important;
+  border: 1px solid var(--primary-color) !important;
+  color: #fff !important;
   font-weight: 560 !important;
 }
 
-.action-buttons .btn-check {
-  background: var(--primary-color) !important;
-  border-color: var(--primary-color) !important;
-  color: #fff !important;
-  min-width: 72px;
-}
-
-.action-buttons .btn-check:hover:not(:disabled) {
+.action-row .btn-action.btn-view.el-button:hover:not(:disabled) {
   background: var(--primary-light) !important;
   border-color: var(--primary-light) !important;
   color: #fff !important;
 }
 
-.action-buttons .btn-check.is-disabled,
-.action-buttons .btn-check:disabled {
-  opacity: 0.55;
-  color: #fff !important;
+/* 删除：红色描边 */
+.action-row .btn-action.btn-delete.el-button {
+  background: #fff !important;
+  border: 1px solid #e8b4a8 !important;
+  color: #c45c48 !important;
 }
 
-.action-buttons .btn-reauth {
-  background: var(--primary-soft) !important;
-  border-color: var(--primary-muted) !important;
-  color: var(--primary-dark) !important;
+.action-row .btn-action.btn-delete.el-button:hover:not(:disabled) {
+  background: #fdf3f0 !important;
+  border-color: #d98a78 !important;
+  color: #a84838 !important;
 }
 
 .auth-status-tag,
@@ -2160,9 +2287,18 @@ onUnmounted(() => {
   max-width: 100%;
 }
 
-/* 固定操作列不要把前一列压没 */
+/* 固定操作列不要把前一列压没；两行按钮垂直居中 */
 .email-table :deep(.ops-column) {
   background: var(--card-bg) !important;
+}
+
+.email-table :deep(.ops-column .cell) {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+.email-table :deep(.el-table__body .ops-column) {
+  vertical-align: middle;
 }
 
 .email-table :deep(.el-table__fixed-right) {
@@ -2441,13 +2577,14 @@ onUnmounted(() => {
 
 .email-card-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 0.5rem;
 }
 
-.email-card-actions .el-button {
-  flex: 1;
-  min-width: calc(50% - 0.25rem);
+.email-card-actions .action-row {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
 }
 
 /* Mobile Responsive Styles */

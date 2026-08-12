@@ -4,8 +4,8 @@ import threading
 import logging
 import hashlib
 import secrets
-from typing import List, Dict, Optional, Callable
-from datetime import datetime
+from typing import List, Dict, Optional, Callable, Any
+from datetime import datetime, timezone
 import traceback
 from utils.email.logger import logger, log_progress
 
@@ -735,10 +735,55 @@ class Database:
         self.conn.execute(f"DELETE FROM emails WHERE id IN ({placeholders})", email_ids)
         self.conn.commit()
 
+    @staticmethod
+    def _normalize_received_time(received_time: Any) -> str:
+        """将接收时间规范为 UTC naive 字符串，便于存储与字符串排序一致。"""
+        if received_time is None:
+            return datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        if isinstance(received_time, datetime):
+            dt = received_time
+            if dt.tzinfo is not None:
+                dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+            return dt.strftime('%Y-%m-%d %H:%M:%S')
+        s = str(received_time).strip()
+        if not s:
+            return datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        try:
+            dt = datetime.fromisoformat(s.replace('Z', '+00:00'))
+            if dt.tzinfo is not None:
+                dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+            return dt.strftime('%Y-%m-%d %H:%M:%S')
+        except Exception:
+            return s
+
+    @staticmethod
+    def _parse_received_time_for_sort(value: Any) -> datetime:
+        """解析 received_time 为可比较的 aware datetime（按绝对时间排序）。"""
+        min_dt = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        if value is None:
+            return min_dt
+        if isinstance(value, datetime):
+            if value.tzinfo is None:
+                return value.replace(tzinfo=timezone.utc)
+            return value
+        s = str(value).strip()
+        if not s:
+            return min_dt
+        try:
+            dt = datetime.fromisoformat(s.replace('Z', '+00:00'))
+            if dt.tzinfo is None:
+                return dt.replace(tzinfo=timezone.utc)
+            return dt
+        except Exception:
+            return min_dt
+
     def add_mail_record(self, email_id, subject, sender, received_time, content, folder=None, has_attachments=0):
         """添加邮件记录"""
         logger.debug(f"添加邮件记录, 邮箱ID: {email_id}, 主题: {subject}")
         try:
+            # 统一为 UTC 时间字符串，避免不同时区导致排序错乱
+            received_time = self._normalize_received_time(received_time)
+
             # 先检查邮件是否已存在
             cursor = self.conn.execute(
                 "SELECT id FROM mail_records WHERE email_id = ? AND sender = ? AND subject = ? AND received_time = ?",
@@ -768,7 +813,7 @@ class Database:
             return False, None
 
     def get_mail_records(self, email_id, user_id=None):
-        """获取指定邮箱的所有邮件记录，可以验证所有者"""
+        """获取指定邮箱的所有邮件记录，可以验证所有者；按接收时间由新到旧。"""
         logger.debug(f"获取邮箱邮件记录, ID: {email_id}")
 
         # 如果指定了用户ID，先验证邮箱所有权
@@ -779,7 +824,7 @@ class Database:
                 return []
 
         cursor = self.conn.execute(
-            "SELECT * FROM mail_records WHERE email_id = ? ORDER BY received_time DESC",
+            "SELECT * FROM mail_records WHERE email_id = ?",
             (email_id,)
         )
 
@@ -804,6 +849,11 @@ class Database:
 
             records.append(record_dict)
 
+        # 按绝对时间排序（兼容历史数据中的时区偏移字符串）
+        records.sort(
+            key=lambda r: self._parse_received_time_for_sort(r.get('received_time')),
+            reverse=True
+        )
         return records
 
     def get_mail_record_by_id(self, mail_id):

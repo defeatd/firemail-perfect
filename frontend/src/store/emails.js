@@ -101,15 +101,8 @@ export const useEmailsStore = defineStore('emails', {
         if (data.email_id === this.currentEmailId) {
           // 添加数据验证和清理
           if (Array.isArray(data.data)) {
-            // 确保每条记录都有必要的字段
-            this.currentMailRecords = data.data.map(record => ({
-              id: record.id || Date.now() + Math.random().toString(36).substring(2, 10),
-              subject: record.subject || '(无主题)',
-              sender: record.sender || '(未知发件人)',
-              received_time: record.received_time || new Date().toISOString(),
-              content: record.content || '(无内容)',
-              folder: record.folder || 'INBOX'
-            }));
+            // 确保每条记录都有必要的字段，并按接收时间由新到旧排序
+            this.currentMailRecords = this._normalizeMailRecords(data.data);
           } else {
             this.currentMailRecords = [];
             console.error('收到的邮件记录数据不是数组格式:', data);
@@ -306,6 +299,28 @@ export const useEmailsStore = defineStore('emails', {
       }
     },
 
+    // 规范化邮件记录并按接收时间由新到旧排序（兼容带时区字符串）
+    _normalizeMailRecords(records) {
+      const list = (Array.isArray(records) ? records : []).map(record => ({
+        id: record.id || Date.now() + Math.random().toString(36).substring(2, 10),
+        subject: record.subject || '(无主题)',
+        sender: record.sender || '(未知发件人)',
+        received_time: record.received_time || new Date().toISOString(),
+        content: record.content || '(无内容)',
+        folder: record.folder || 'INBOX',
+        has_attachments: record.has_attachments || 0
+      }));
+      list.sort((a, b) => {
+        const ta = a.received_time ? new Date(a.received_time).getTime() : 0;
+        const tb = b.received_time ? new Date(b.received_time).getTime() : 0;
+        if (Number.isNaN(ta) && Number.isNaN(tb)) return 0;
+        if (Number.isNaN(ta)) return 1;
+        if (Number.isNaN(tb)) return -1;
+        return tb - ta;
+      });
+      return list;
+    },
+
     // 获取邮件记录
     async fetchMailRecords(emailId) {
       this.loading = true;
@@ -317,14 +332,7 @@ export const useEmailsStore = defineStore('emails', {
 
           // 确保返回数据是数组且每条记录格式正确
           if (Array.isArray(response)) {
-            this.currentMailRecords = response.map(record => ({
-              id: record.id || Date.now() + Math.random().toString(36).substring(2, 10),
-              subject: record.subject || '(无主题)',
-              sender: record.sender || '(未知发件人)',
-              received_time: record.received_time || new Date().toISOString(),
-              content: record.content || '(无内容)',
-              folder: record.folder || 'INBOX'
-            }));
+            this.currentMailRecords = this._normalizeMailRecords(response);
           } else {
             this.currentMailRecords = [];
             console.error('API返回的邮件记录数据不是数组格式:', response);

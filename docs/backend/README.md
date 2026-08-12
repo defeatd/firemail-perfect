@@ -14,24 +14,16 @@
 
 ```
 backend/
-├── app.py                  # 应用入口，Flask应用配置
+├── app.py                  # 应用入口：路由、鉴权、限流
+├── jwt_config.py           # Flask / WebSocket 共享 JWT 密钥
 ├── database/               # 数据库相关模块
-│   └── db.py               # 数据库操作类
-├── websocket/              # WebSocket服务模块
-│   └── handler.py          # WebSocket消息处理器
+│   └── db.py               # SQLite 操作类
 ├── utils/                  # 工具类
-│   ├── email/              # 邮件处理工具
-│   │   └── processor.py    # 邮件处理器
-│   │   └── outlook.py      # Outlook邮箱处理
-│   │   └── oauth.py        # OAuth认证处理
-│   ├── security.py         # 安全相关工具
-│   └── logger.py           # 日志工具
-├── apis/                   # API模块
-│   └── email_api.py        # 邮箱相关API
-├── ws_server/              # WebSocket服务器
-│   └── handler.py          # WebSocket消息处理
-└── data/                   # 数据存储目录
-    └── huohuo_email.db     # SQLite数据库文件
+│   └── email/              # 邮件处理（Outlook / IMAP / 导入等）
+├── ws_server/              # WebSocket 服务器
+│   └── handler.py          # 实时消息与进度推送
+└── data/                   # 数据存储目录（运行时挂载，勿提交）
+    └── huohuo_email.db     # SQLite 数据库文件
 ```
 
 ## 核心模块

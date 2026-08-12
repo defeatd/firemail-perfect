@@ -93,10 +93,10 @@ frontend/
 - 邮箱状态显示
 
 相关文件：
-- `src/views/EmailsView.vue` - 邮箱管理界面
-- `src/components/EmailList.vue` - 邮箱列表组件
-- `src/components/AddEmailForm.vue` - 添加邮箱表单
-- `src/services/emails.js` - 邮箱相关API服务
+- `src/views/EmailsView.vue` - 邮箱管理界面（列表、导入、操作按钮）
+- `src/store/emails.js` - 邮箱状态（Pinia）
+- `src/services/api.js` - HTTP API
+- `src/services/websocket.js` - WebSocket
 
 ### 3. 邮件查看模块
 

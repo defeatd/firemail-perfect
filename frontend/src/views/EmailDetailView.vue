@@ -159,8 +159,20 @@ const isProcessing = computed(() => {
   return status && status.progress > 0 && status.progress < 100
 })
 
-// 邮件记录
-const mailRecords = computed(() => emailsStore.currentMailRecords)
+// 邮件记录（按接收时间由新到旧）
+const mailRecords = computed(() => {
+  const list = Array.isArray(emailsStore.currentMailRecords)
+    ? [...emailsStore.currentMailRecords]
+    : []
+  return list.sort((a, b) => {
+    const ta = a?.received_time ? dayjs(a.received_time).valueOf() : 0
+    const tb = b?.received_time ? dayjs(b.received_time).valueOf() : 0
+    if (Number.isNaN(ta) && Number.isNaN(tb)) return 0
+    if (Number.isNaN(ta)) return 1
+    if (Number.isNaN(tb)) return -1
+    return tb - ta
+  })
+})
 
 // 过滤的邮件记录
 const filteredMailRecords = computed(() => {

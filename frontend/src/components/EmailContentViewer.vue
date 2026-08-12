@@ -585,10 +585,11 @@ const sanitizedContent = computed(() => {
       'noshade', 'nowrap', 'size', 'start', 'value', 'frameborder', 'scrolling', 'shape',
       'data-*', 'aria-*', 'role', 'tabindex', 'disabled', 'checked', 'selected', 'readonly',
       'placeholder', 'autocomplete', 'autofocus', 'required', 'multiple', 'min', 'max',
-      'step', 'pattern', 'accept', 'capture', 'for', 'form', 'formaction', 'formenctype',
-      'formmethod', 'formnovalidate', 'formtarget', 'list', 'max', 'maxlength', 'min',
+      'step', 'pattern', 'accept', 'capture', 'for', 'form', 'list', 'max', 'maxlength',
       'minlength', 'spellcheck', 'translate', 'wrap'
     ],
+    // 禁止表单提交相关危险属性，降低钓鱼 HTML 风险
+    FORBID_ATTR: ['formaction', 'formenctype', 'formmethod', 'formnovalidate', 'formtarget'],
     ALLOW_DATA_ATTR: true,
     ADD_ATTR: ['target'],
     WHOLE_DOCUMENT: isGitHubEmail.value || isMicrosoftEmail.value || isNotionEmail.value, // 对特殊邮件保留完整文档结构

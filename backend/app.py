@@ -37,11 +37,11 @@ os.makedirs(data_dir, exist_ok=True)
 # 初始化Flask应用
 app = Flask(__name__)
 
-# 安全修复：添加速率限制防止暴力破解
+# 速率限制：默认不限（SPA 列表/轮询易触发 429）；敏感接口单独限速
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
+    default_limits=[],
     storage_uri="memory://"
 )
 
@@ -83,13 +83,16 @@ logger.info("系统启动中...")
 
 
 def serialize_email_for_api(email_row, include_secrets=False):
-    """序列化邮箱记录；默认脱敏 password / access_token，避免列表接口泄露凭证。"""
+    """序列化邮箱记录；默认脱敏 password / refresh_token / access_token。"""
     if not email_row:
         return None
     data = dict(email_row)
     if not include_secrets:
         if 'password' in data and data.get('password'):
             data['password'] = '******'
+        # refresh_token 为长期 OAuth 凭证，列表接口不应下发
+        if 'refresh_token' in data and data.get('refresh_token'):
+            data['refresh_token'] = '******'
         # access_token 短期凭证不应下发前端
         if 'access_token' in data:
             data['access_token'] = None
@@ -185,12 +188,13 @@ def login():
             logger.error(f"用户对象缺少必要字段: {user}")
             return jsonify({'error': '内部服务器错误'}), 500
 
-        # 生成JWT令牌
+        # JWT 与 Cookie 统一 7 天有效期
+        token_max_age_seconds = 7 * 24 * 60 * 60
         token = jwt.encode({
             'user_id': user['id'],
             'username': user['username'],
             'is_admin': user['is_admin'],
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(days=7)
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=token_max_age_seconds)
         }, JWT_SECRET, algorithm="HS256")
 
         # 创建响应
@@ -219,7 +223,7 @@ def login():
             'token',
             token,
             httponly=True,
-            max_age=24*60*60,  # 安全修复：缩短为1天
+            max_age=token_max_age_seconds,
             secure=is_production,  # 生产环境自动启用 HTTPS
             samesite='Lax'
         )
@@ -405,6 +409,7 @@ def reset_user_password(current_user, user_id):
 
 # 修改现有API以加入用户认证和授权
 @app.route('/api/health', methods=['GET'])
+@limiter.exempt  # 健康检查不受限流，避免 Docker healthcheck 被 429
 def health_check():
     """健康检查接口"""
     return jsonify({'status': 'ok', 'message': '花火邮箱助手服务正在运行'})
@@ -621,14 +626,12 @@ def batch_delete_emails(current_user):
 def check_email(current_user, email_id):
     """检查指定邮箱的新邮件"""
     try:
-        # 获取邮箱信息
-        email_info = db.get_email_by_id(email_id)
+        # 管理员可操作任意邮箱，普通用户仅自己的
+        email_info = db.get_email_by_id(
+            email_id, None if current_user['is_admin'] else current_user['id']
+        )
         if not email_info:
-            return jsonify({'error': '邮箱不存在'}), 404
-
-        # 检查邮箱是否属于当前用户
-        if email_info['user_id'] != current_user['id']:
-            return jsonify({'error': '无权操作此邮箱'}), 403
+            return jsonify({'error': '邮箱不存在或您没有权限'}), 404
 
         # 检查邮箱是否正在处理中
         if email_processor.is_email_being_processed(email_id):
@@ -799,19 +802,34 @@ def download_attachment(current_user, attachment_id):
         if not email_info:
             return jsonify({'error': '无权下载此附件'}), 403
 
-        # 准备下载响应
-        filename = attachment['filename']
-        content_type = attachment['content_type']
+        # 准备下载响应（安全编码文件名，防止响应头注入）
+        raw_filename = attachment['filename'] or 'attachment'
+        safe_filename = os.path.basename(str(raw_filename)).replace('"', '').replace('\r', '').replace('\n', '')
+        if not safe_filename or safe_filename in ('.', '..'):
+            safe_filename = 'attachment'
+        content_type = attachment['content_type'] or 'application/octet-stream'
         content = attachment['content']
+
+        from urllib.parse import quote
+        # ASCII fallback + RFC 5987 UTF-8 filename*
+        try:
+            safe_filename.encode('ascii')
+            ascii_name = safe_filename
+        except UnicodeEncodeError:
+            ascii_name = 'attachment'
+        disposition = (
+            f'attachment; filename="{ascii_name}"; '
+            f"filename*=UTF-8''{quote(safe_filename)}"
+        )
 
         response = make_response(content)
         response.headers['Content-Type'] = content_type
-        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response.headers['Content-Disposition'] = disposition
 
         return response
     except Exception as e:
         logger.error(f"下载附件失败: {str(e)}")
-        return jsonify({'error': f'服务器错误: {str(e)}'}), 500
+        return jsonify({'error': '下载附件失败'}), 500
 
 @app.route('/api/emails/<int:email_id>/upload_email_file', methods=['POST'])
 @token_required
@@ -971,22 +989,39 @@ def serve_frontend(path):
         return send_from_directory(frontend_dir, 'index.html')
 
 @app.route('/api/emails/<int:email_id>/password', methods=['GET'])
+@app.route('/api/emails/<int:email_id>/credentials', methods=['GET'])
 @token_required
+@limiter.limit("30 per minute")  # 敏感凭证接口严格限速，防止批量拉取
 def get_email_password(current_user, email_id):
-    """获取指定邮箱的密码"""
+    """获取指定邮箱的敏感凭证（密码 / refresh_token 等，按需下发）"""
     try:
-        email = db.get_email_by_id(email_id)
+        email = db.get_email_by_id(
+            email_id, None if current_user['is_admin'] else current_user['id']
+        )
         if not email:
-            return jsonify({'error': '邮箱不存在'}), 404
+            logger.warning(
+                f"凭证访问拒绝: user={current_user.get('username')} "
+                f"user_id={current_user.get('id')} email_id={email_id}"
+            )
+            return jsonify({'error': '邮箱不存在或您没有权限'}), 404
 
-        # 验证是否为当前用户的邮箱或管理员
-        if email['user_id'] != current_user['id'] and not current_user['is_admin']:
-            return jsonify({'error': '无权访问此邮箱'}), 403
-
-        return jsonify({'password': email['password']})
+        email_data = dict(email)
+        # 审计日志：不记录凭证内容，仅记录谁拉取了哪个邮箱
+        logger.info(
+            f"[AUDIT] 凭证下发: user={current_user.get('username')} "
+            f"user_id={current_user.get('id')} email_id={email_id} "
+            f"email={email_data.get('email')} mail_type={email_data.get('mail_type')} "
+            f"ip={request.remote_addr}"
+        )
+        return jsonify({
+            'password': email_data.get('password'),
+            'client_id': email_data.get('client_id'),
+            'refresh_token': email_data.get('refresh_token'),
+            'mail_type': email_data.get('mail_type'),
+        })
     except Exception as e:
-        logger.error(f"获取邮箱密码失败: {str(e)}")
-        return jsonify({'error': f'服务器错误: {str(e)}'}), 500
+        logger.error(f"获取邮箱凭证失败: {str(e)}")
+        return jsonify({'error': '获取邮箱凭证失败'}), 500
 
 @app.route('/api/search', methods=['POST'])
 @token_required
@@ -1043,8 +1078,9 @@ def update_email(current_user, email_id):
         if not data:
             return jsonify({'error': '无效的请求数据'}), 400
 
-        # 获取当前邮箱信息，用于保留不允许修改的字段
-        current_email = db.get_email_by_id(email_id, current_user['id'])
+        # 获取当前邮箱信息；管理员可改任意邮箱
+        owner_filter = None if current_user['is_admin'] else current_user['id']
+        current_email = db.get_email_by_id(email_id, owner_filter)
         if not current_email:
             return jsonify({'error': '邮箱不存在或您没有权限修改'}), 404
 
@@ -1068,7 +1104,7 @@ def update_email(current_user, email_id):
         if current_email['mail_type'] == 'outlook':
             if data.get('client_id'):
                 update_data['client_id'] = data.get('client_id')
-            if data.get('refresh_token'):
+            if data.get('refresh_token') and data.get('refresh_token') != '******':
                 update_data['refresh_token'] = data.get('refresh_token')
         elif current_email['mail_type'] in ['imap', 'gmail', 'qq']:
             if data.get('server'):
@@ -1078,10 +1114,10 @@ def update_email(current_user, email_id):
             if data.get('use_ssl') is not None:
                 update_data['use_ssl'] = data.get('use_ssl')
 
-        # 更新邮箱信息
+        # 更新邮箱信息（管理员不限制 user_id）
         success = db.update_email(
             email_id,
-            user_id=current_user['id'],
+            user_id=owner_filter,
             **update_data
         )
 
@@ -1336,8 +1372,10 @@ def toggle_email_realtime_check(current_user, email_id):
         data = request.json
         enable = data.get('enable', False)
 
-        # 获取当前邮箱信息
-        email_info = db.get_email_by_id(email_id, current_user['id'])
+        # 获取当前邮箱信息；管理员可操作任意邮箱
+        email_info = db.get_email_by_id(
+            email_id, None if current_user['is_admin'] else current_user['id']
+        )
         if not email_info:
             return jsonify({'error': '邮箱不存在或您没有权限'}), 404
 
