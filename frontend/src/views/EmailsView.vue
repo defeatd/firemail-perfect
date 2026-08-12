@@ -187,9 +187,9 @@
                 @change="toggleEmailSelection(email)"
               />
               <el-tag
-                :type="getMailTypeColor(email.mail_type || 'outlook')"
                 effect="plain"
                 size="small"
+                class="mail-type-tag"
               >
                 {{ getMailTypeName(email.mail_type || 'outlook') }}
               </el-tag>
@@ -422,7 +422,7 @@
             <template #default="scope">
               <div class="subject-cell">
                 <span>{{ scope.row.subject }}</span>
-                <el-tag v-if="scope.row.has_attachments" size="small" type="success" class="attachment-tag">
+                <el-tag v-if="scope.row.has_attachments" size="small" effect="plain" class="attachment-tag mail-type-tag">
                   <el-icon><Document /></el-icon> 附件
                 </el-tag>
               </div>
@@ -513,7 +513,7 @@
           </el-form-item>
           <!-- 显示邮箱类型但不能修改 -->
           <el-form-item label="邮箱类型">
-            <el-tag :type="getMailTypeColor(editForm.mail_type)">
+            <el-tag effect="plain" class="mail-type-tag">
               {{ getMailTypeName(editForm.mail_type) }}
             </el-tag>
             <div class="form-tips">邮箱类型创建后不可修改</div>
@@ -1949,7 +1949,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: var(--bg-color);
+  background-color: var(--neutral-100);
   overflow-x: hidden;
 }
 
@@ -1966,7 +1966,7 @@ onUnmounted(() => {
 
 .email-list-card {
   margin-bottom: 20px;
-  transition: all var(--transition-normal);
+  transition: none;
 }
 
 .card-header {
@@ -1975,10 +1975,11 @@ onUnmounted(() => {
 
 .page-title {
   font-size: 1.5rem;
-  color: var(--primary-color);
+  color: var(--primary-text-color);
   margin: 0;
   position: relative;
   display: inline-block;
+  font-weight: 500;
 }
 
 .page-title::after {
@@ -1998,7 +1999,7 @@ onUnmounted(() => {
   border: none !important;
 }
 
-/* 表格整体美化 */
+/* 表格：与用户管理一致的暖米色 */
 .email-table :deep(.el-table__inner-wrapper) {
   border-radius: 0.75rem;
 }
@@ -2007,43 +2008,45 @@ onUnmounted(() => {
   border-radius: 0.75rem 0.75rem 0 0;
 }
 
-/* 增强表格样式 */
 .email-table :deep(.el-table__header) {
-  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+  background: var(--neutral-50) !important;
 }
 
 .email-table :deep(.el-table__header th) {
-  background: transparent;
+  background: var(--neutral-50) !important;
   font-weight: 500;
-  color: #475569;
+  color: var(--secondary-text-color);
   padding: 14px 12px;
-  border-bottom: 2px solid #E2E8F0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .email-table :deep(.el-table__header th .cell) {
   font-size: 0.875rem;
-  letter-spacing: 0.025em;
+  letter-spacing: -0.011em;
 }
 
 .email-table :deep(.el-table__body td) {
   padding: 12px;
-  border-bottom: 1px solid #F1F5F9;
+  border-bottom: 1px solid var(--border-color-light);
+  background: var(--card-bg);
 }
 
 .email-table :deep(.el-table__row) {
-  transition: all 0.2s ease;
+  transition: background-color 0.12s ease;
+  background: var(--card-bg);
 }
 
 .email-table :deep(.el-table__row:hover) {
-  background-color: rgba(99, 102, 241, 0.04) !important;
+  background-color: var(--neutral-50) !important;
 }
 
 .email-table :deep(.el-table__row:hover td) {
-  background-color: transparent !important;
+  background-color: var(--neutral-50) !important;
 }
 
-.email-table :deep(.el-table__row.current-row) {
-  background-color: rgba(99, 102, 241, 0.08);
+.email-table :deep(.el-table__row.current-row),
+.email-table :deep(.el-table__row.current-row td) {
+  background-color: var(--primary-soft) !important;
 }
 
 /* 选择框列样式 */
@@ -2072,7 +2075,7 @@ onUnmounted(() => {
 }
 
 .email-avatar span {
-  color: white;
+  color: var(--primary-dark);
   font-weight: 500;
   font-size: 0.95rem;
   text-transform: uppercase;
@@ -2080,26 +2083,29 @@ onUnmounted(() => {
 
 .email-text {
   font-weight: 500;
-  color: #1E293B;
+  color: var(--primary-text-color);
   font-size: 0.9rem;
 }
 
 /* 增强按钮样式 */
 .toolbar .el-button {
-  font-weight: 500;
+  font-weight: 400;
   border-radius: 0.5rem;
 }
 
 .action-btn {
   border-radius: 0.375rem;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .mail-type-tag {
-  font-weight: 500;
+  font-weight: 400 !important;
   white-space: nowrap;
   padding: 4px 12px;
   font-size: 0.8rem;
+  background: var(--neutral-100) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-button) !important;
 }
 
 /* 密码列：避免 el-table .cell overflow 裁切显示/隐藏按钮 */
@@ -2124,12 +2130,14 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+  font-family: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+  /* 与用户管理表单输入框一致：暖白底 + 米色边 */
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 0.85rem;
-  color: #475569;
+  color: var(--text-button);
   letter-spacing: 0.05em;
   box-sizing: border-box;
 }
@@ -2142,12 +2150,12 @@ onUnmounted(() => {
   min-width: 28px;
   z-index: 2;
   position: relative;
-  transition: all 0.2s ease;
+  color: var(--text-button-muted) !important;
 }
 
 .password-toggle-btn:hover {
   transform: none;
-  color: var(--primary-dark);
+  color: var(--primary-dark) !important;
 }
 
 .time-field {
@@ -2253,22 +2261,23 @@ onUnmounted(() => {
   padding: 0 8px !important;
 }
 
+/* 授权状态：统一暖米色系，不再用绿/红跳色 */
 .auth-ok {
-  background: #E8F0E9 !important;
-  color: #5A7A5E !important;
-  border-color: #C9D9CB !important;
+  background: var(--primary-soft) !important;
+  color: var(--primary-dark) !important;
+  border-color: var(--primary-muted) !important;
 }
 
 .auth-need {
-  background: #F8EBE7 !important;
-  color: #A65A4A !important;
-  border-color: #E8C9C0 !important;
+  background: var(--warning-soft) !important;
+  color: var(--primary-dark) !important;
+  border-color: var(--primary-muted) !important;
 }
 
 .auth-error {
-  background: #F3EDE0 !important;
-  color: #8B7345 !important;
-  border-color: #E0D5BC !important;
+  background: var(--neutral-100) !important;
+  color: var(--text-button) !important;
+  border-color: var(--border-color) !important;
 }
 
 .email-main {
@@ -2369,9 +2378,10 @@ onUnmounted(() => {
 .mail-attachments {
   margin: 10px 0;
   padding: 10px;
-  background-color: #f0f9eb;
+  background-color: var(--neutral-50);
   border-radius: 4px;
-  border-left: 3px solid #67c23a;
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--primary-muted);
 }
 
 .attachments-list {
@@ -2394,7 +2404,8 @@ onUnmounted(() => {
   font-size: 0.9rem;
   line-height: 1.5;
   padding: 10px;
-  background-color: var(--bg-light);
+  background-color: var(--neutral-50);
+  border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
 }
 
@@ -2402,7 +2413,8 @@ onUnmounted(() => {
   max-width: 100%;
   overflow-x: auto;
   padding: 10px;
-  background-color: var(--bg-light);
+  background-color: var(--neutral-50);
+  border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   line-height: 1.5;
 }
@@ -2439,10 +2451,12 @@ onUnmounted(() => {
 .import-help {
   margin-bottom: 20px;
   padding: 10px;
-  background-color: var(--bg-light);
+  background-color: var(--neutral-50);
+  border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   font-size: 0.9rem;
   line-height: 1.5;
+  color: var(--regular-text-color);
 }
 
 .server-info {
@@ -2450,24 +2464,26 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 4px;
   font-size: 0.8rem;
-  background: #F8FAFC;
+  background: var(--neutral-50);
+  border: 1px solid var(--border-color);
   padding: 8px 10px;
   border-radius: 6px;
 }
 
 .server-field, .port-field {
-  color: #64748B;
+  color: var(--secondary-text-color);
 }
 
 .server-field strong, .port-field strong {
-  color: #475569;
+  color: var(--regular-text-color);
   margin-right: 4px;
 }
 
 .config-info {
   font-size: 0.8rem;
-  color: #64748B;
-  background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+  color: var(--secondary-text-color);
+  background: var(--neutral-50);
+  border: 1px solid var(--border-color);
   padding: 6px 12px;
   border-radius: 6px;
   display: inline-block;
@@ -2512,17 +2528,22 @@ onUnmounted(() => {
   transform: none;
 }
 
-/* Modern Card Styles */
+/* 卡片：与用户管理一致的暖白底 + 米色边 */
 .email-list-card {
   border-radius: 1rem;
-  border: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border-color) !important;
+  box-shadow: none !important;
+  background: var(--card-bg) !important;
 }
 
 .email-list-card :deep(.el-card__header) {
-  border-bottom: 1px solid #E2E8F0;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--card-bg);
   border-radius: 1rem 1rem 0 0;
+}
+
+.email-list-card :deep(.el-card__body) {
+  background: var(--card-bg);
 }
 
 /* 移动端卡片列表样式 */
@@ -2531,12 +2552,12 @@ onUnmounted(() => {
 }
 
 .email-card {
-  background: #fff;
+  background: var(--card-bg);
   border-radius: 0.75rem;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--border-color);
   padding: 1rem;
   margin-bottom: 0.75rem;
-  transition: all 0.2s ease;
+  transition: border-color 0.12s ease;
 }
 
 .email-card:hover {
@@ -2546,7 +2567,7 @@ onUnmounted(() => {
 
 .email-card.selected {
   border-color: var(--primary-color);
-  background: rgba(99, 102, 241, 0.05);
+  background: var(--primary-soft);
 }
 
 .email-card-header {
@@ -2562,7 +2583,7 @@ onUnmounted(() => {
 
 .email-address {
   font-weight: 500;
-  color: #1E293B;
+  color: var(--primary-text-color);
   font-size: 0.95rem;
   word-break: break-all;
   margin-bottom: 0.5rem;
@@ -2570,7 +2591,7 @@ onUnmounted(() => {
 
 .email-meta {
   font-size: 0.8rem;
-  color: #64748B;
+  color: var(--secondary-text-color);
 }
 
 .meta-label {
@@ -2767,8 +2788,9 @@ onUnmounted(() => {
   font-weight: 500;
   letter-spacing: 0.08em;
   padding: 4px 10px;
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  border: 1px solid var(--primary-muted);
   border-radius: 6px;
   cursor: pointer;
   user-select: all;
@@ -2780,25 +2802,30 @@ onUnmounted(() => {
 .device-status-box {
   padding: 12px 14px;
   border-radius: 8px;
-  background: #f1f5f9;
+  background: var(--neutral-50);
+  border: 1px solid var(--border-color);
+  color: var(--regular-text-color);
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
 }
 .device-status-box.status-pending {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--primary-soft);
+  border-color: var(--primary-muted);
+  color: var(--primary-dark);
 }
 .device-status-box.status-success {
-  background: #ecfdf5;
-  color: #047857;
+  background: var(--primary-soft);
+  border-color: var(--primary-muted);
+  color: var(--primary-dark);
 }
 .device-status-box.status-error,
 .device-status-box.status-denied,
 .device-status-box.status-expired {
-  background: #fef2f2;
-  color: #b91c1c;
+  background: var(--danger-soft);
+  border-color: #E5C9C2;
+  color: var(--danger-color);
 }
 .device-msg {
   color: #64748b;
