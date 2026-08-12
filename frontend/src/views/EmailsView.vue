@@ -244,7 +244,14 @@
             </div>
 
             <div class="email-card-body">
-              <div class="email-address">{{ email.email }}</div>
+              <button
+                type="button"
+                class="email-address email-copyable"
+                :title="`点击复制：${email.email}`"
+                @click.stop="copyEmailAddress(email.email)"
+              >
+                {{ email.email }}
+              </button>
               <div class="email-meta">
                 <span class="meta-label">最后检查:</span>
                 <span class="meta-value">{{ formatDate(email.last_check_time) }}</span>
@@ -2727,6 +2734,29 @@ button.email-copyable:hover {
   font-size: 0.95rem;
   word-break: break-all;
   margin-bottom: 0.5rem;
+}
+
+/* 移动端：点击邮箱复制（与桌面一致） */
+button.email-address.email-copyable {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0 0 0.5rem 0;
+  cursor: pointer;
+  font: inherit;
+  color: var(--primary-text-color);
+  -webkit-tap-highlight-color: transparent;
+  user-select: text;
+}
+
+button.email-address.email-copyable:active,
+button.email-address.email-copyable:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .email-meta {
