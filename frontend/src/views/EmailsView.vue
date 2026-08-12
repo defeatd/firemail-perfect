@@ -42,6 +42,11 @@
           </el-button>
         </div>
 
+        <!--
+          列宽策略：全部 min-width（不要 width），表格 width:100% + 默认 fit
+          剩余宽度按 min-width 比例分给各列，避免某一列独吞或右侧空列。
+          表头/内容居中，格子内左右间距对称。
+        -->
         <el-table
           v-loading="loading"
           :data="sortedEmails"
@@ -56,7 +61,9 @@
         >
           <el-table-column
             type="selection"
-            width="48"
+            min-width="48"
+            align="center"
+            header-align="center"
             :selectable="row => row"
             reserve-selection
             class-name="selection-column"
@@ -64,7 +71,9 @@
           <el-table-column
             prop="email"
             label="邮箱地址"
-            min-width="160"
+            min-width="150"
+            align="center"
+            header-align="center"
             sortable="custom"
             class-name="email-column"
           >
@@ -105,7 +114,9 @@
           <el-table-column
             prop="mail_type"
             label="类型"
-            :width="typeColumnWidth"
+            min-width="120"
+            align="center"
+            header-align="center"
             sortable="custom"
             class-name="type-column"
           >
@@ -115,7 +126,14 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="password" label="密码" width="150" class-name="password-column">
+          <el-table-column
+            prop="password"
+            label="密码"
+            min-width="130"
+            align="center"
+            header-align="center"
+            class-name="password-column"
+          >
             <template #default="scope">
               <div class="password-field">
                 <code class="password-text" :title="scope.row.showPassword ? scope.row.password : ''">
@@ -136,7 +154,7 @@
           <el-table-column
             prop="last_check_time"
             label="最后检查"
-            width="110"
+            min-width="108"
             align="center"
             header-align="center"
             sortable="custom"
@@ -152,7 +170,12 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="授权" width="80" align="center">
+          <el-table-column
+            label="授权"
+            min-width="72"
+            align="center"
+            header-align="center"
+          >
             <template #default="scope">
               <el-tag
                 v-if="(scope.row.mail_type || 'outlook') === 'outlook'"
@@ -165,7 +188,13 @@
               <span v-else class="text-muted">—</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" fixed="right" width="220" class-name="ops-column">
+          <el-table-column
+            label="操作"
+            min-width="200"
+            align="center"
+            header-align="center"
+            class-name="ops-column"
+          >
             <template #default="scope">
               <div class="action-buttons">
                 <div class="action-row">
@@ -803,29 +832,6 @@ const getMailTypeName = (type) => {
 const getMailTypeColor = (type) => {
   return mailTypes[type]?.color || 'default'
 }
-
-// 文本宽度估算（全角 / 半角）
-const measureTextUnits = (text) => {
-  let units = 0
-  for (const ch of String(text || '')) {
-    units += /[\u1100-\uFFFF]/.test(ch) ? 1.05 : 0.58
-  }
-  return units
-}
-
-// 类型列固定为内容宽；表格 100% 时剩余宽度只分给「邮箱地址」(min-width)
-const typeColumnWidth = computed(() => {
-  const labels = (sortedEmails.value || []).map((e) =>
-    getMailTypeName(e.mail_type || 'outlook')
-  )
-  labels.push('类型')
-  let maxUnits = 2
-  for (const label of labels) {
-    maxUnits = Math.max(maxUnits, measureTextUnits(label))
-  }
-  const px = Math.ceil(maxUnits * 14 + 36)
-  return Math.min(Math.max(px, 72), 160)
-})
 
 // 添加邮箱表单
 const addEmailForm = ref({
@@ -2112,19 +2118,35 @@ onUnmounted(() => {
   background: var(--neutral-50) !important;
   font-weight: 500;
   color: var(--secondary-text-color);
-  padding: 14px 12px;
+  padding: 12px 10px;
   border-bottom: 1px solid var(--border-color);
+  text-align: center !important;
 }
 
 .email-table :deep(.el-table__header th .cell) {
   font-size: 0.875rem;
   letter-spacing: -0.011em;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
 }
 
 .email-table :deep(.el-table__body td) {
-  padding: 12px;
+  padding: 10px;
   border-bottom: 1px solid var(--border-color-light);
   background: var(--card-bg);
+  text-align: center !important;
+}
+
+/* 表头 + 单元格：内容居中，左右间距对称 */
+.email-table :deep(.cell) {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+  box-sizing: border-box;
 }
 
 .email-table :deep(.el-table__row) {
@@ -2145,31 +2167,29 @@ onUnmounted(() => {
   background-color: var(--primary-soft) !important;
 }
 
-/* 选择框列样式 */
-.email-table :deep(.selection-column .cell) {
-  padding-left: 14px;
-  padding-right: 8px;
-}
-
-/* 邮箱地址：收窄、自动换行、可点击复制 */
+/* 邮箱地址：换行 + 居中 + 可复制 */
 .email-table :deep(.email-column .cell) {
   white-space: normal;
   line-height: 1.35;
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
 }
 
 .email-cell {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
   gap: 0;
   min-width: 0;
   width: 100%;
+  max-width: 220px; /* 防止邮箱列视觉上无限变宽 */
+  margin: 0 auto;
 }
 
 .email-main {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 4px;
   min-width: 0;
   width: 100%;
@@ -2183,12 +2203,13 @@ onUnmounted(() => {
   overflow-wrap: anywhere;
   white-space: normal;
   line-height: 1.35;
+  text-align: center;
 }
 
 button.email-copyable {
   display: block;
   width: 100%;
-  text-align: left;
+  text-align: center;
   background: none;
   border: none;
   padding: 0;
@@ -2207,6 +2228,7 @@ button.email-copyable:hover {
 .email-meta-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   flex-wrap: wrap;
 }
@@ -2264,11 +2286,13 @@ button.email-copyable:hover {
 }
 
 .password-field {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  width: 100%;
+  max-width: 100%;
   min-width: 0;
+  margin: 0 auto;
 }
 
 .password-text {
@@ -2354,6 +2378,8 @@ button.email-copyable:hover {
   flex-direction: column;
   gap: 6px;
   width: 100%;
+  max-width: 210px;
+  margin: 0 auto;
   padding: 2px 0;
 }
 
@@ -2362,6 +2388,7 @@ button.email-copyable:hover {
   gap: 6px;
   width: 100%;
   align-items: stretch;
+  justify-content: center;
 }
 
 /* 统一操作按钮尺寸与默认外观（Claude 式轻字重 + 柔和字色） */
