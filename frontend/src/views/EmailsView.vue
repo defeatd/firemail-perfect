@@ -53,7 +53,6 @@
           border
           highlight-current-row
           class="email-table desktop-table"
-          :fit="true"
         >
           <el-table-column
             type="selection"
@@ -65,7 +64,7 @@
           <el-table-column
             prop="email"
             label="邮箱地址"
-            :width="emailColumnWidth"
+            min-width="160"
             sortable="custom"
             class-name="email-column"
           >
@@ -116,7 +115,7 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="password" label="密码" width="168" class-name="password-column">
+          <el-table-column prop="password" label="密码" width="150" class-name="password-column">
             <template #default="scope">
               <div class="password-field">
                 <code class="password-text" :title="scope.row.showPassword ? scope.row.password : ''">
@@ -137,7 +136,7 @@
           <el-table-column
             prop="last_check_time"
             label="最后检查"
-            width="120"
+            width="110"
             align="center"
             header-align="center"
             sortable="custom"
@@ -153,7 +152,7 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="授权" width="96" align="center">
+          <el-table-column label="授权" width="80" align="center">
             <template #default="scope">
               <el-tag
                 v-if="(scope.row.mail_type || 'outlook') === 'outlook'"
@@ -166,7 +165,7 @@
               <span v-else class="text-muted">—</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" fixed="right" width="228" class-name="ops-column">
+          <el-table-column label="操作" fixed="right" width="220" class-name="ops-column">
             <template #default="scope">
               <div class="action-buttons">
                 <div class="action-row">
@@ -805,7 +804,7 @@ const getMailTypeColor = (type) => {
   return mailTypes[type]?.color || 'default'
 }
 
-// 文本宽度估算（全角 / 半角），用于列宽自适应
+// 文本宽度估算（全角 / 半角）
 const measureTextUnits = (text) => {
   let units = 0
   for (const ch of String(text || '')) {
@@ -814,7 +813,7 @@ const measureTextUnits = (text) => {
   return units
 }
 
-// 类型列：按内容贴合，不吃表格剩余宽度
+// 类型列固定为内容宽；表格 100% 时剩余宽度只分给「邮箱地址」(min-width)
 const typeColumnWidth = computed(() => {
   const labels = (sortedEmails.value || []).map((e) =>
     getMailTypeName(e.mail_type || 'outlook')
@@ -825,21 +824,7 @@ const typeColumnWidth = computed(() => {
     maxUnits = Math.max(maxUnits, measureTextUnits(label))
   }
   const px = Math.ceil(maxUnits * 14 + 36)
-  return Math.min(Math.max(px, 72), 168)
-})
-
-// 邮箱列：按内容自适应；过长地址在列内换行，不把整列撑满表格
-const emailColumnWidth = computed(() => {
-  const emails = (sortedEmails.value || []).map((e) => String(e?.email || ''))
-  emails.push('邮箱地址')
-  let maxUnits = measureTextUnits('邮箱地址')
-  for (const email of emails) {
-    // 超过约 22 个半角单位的部分靠换行展示，列宽不再继续加
-    maxUnits = Math.max(maxUnits, Math.min(measureTextUnits(email), 22))
-  }
-  // 小号正文字号 + 复制按钮/状态标签行的左右边距
-  const px = Math.ceil(maxUnits * 8.5 + 32)
-  return Math.min(Math.max(px, 128), 200)
+  return Math.min(Math.max(px, 72), 160)
 })
 
 // 添加邮箱表单
