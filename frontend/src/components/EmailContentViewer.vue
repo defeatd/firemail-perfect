@@ -1422,7 +1422,7 @@ watch(() => props.mail, () => {
 .sender-avatar {
   background-color: var(--primary-color);
   color: white;
-  font-weight: bold;
+  font-weight: 500;
 }
 
 .email-attachments {
@@ -1615,7 +1615,7 @@ watch(() => props.mail, () => {
 .html-content :deep(h4), .html-content :deep(h5), .html-content :deep(h6) {
   margin-top: 24px;
   margin-bottom: 16px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.25;
   color: #303133;
 }
@@ -1648,7 +1648,7 @@ watch(() => props.mail, () => {
 .html-content :deep(.email-heading) {
   color: #24292e;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.3;
   font-size: 24px;
   margin: 16px 0;
@@ -1887,7 +1887,7 @@ watch(() => props.mail, () => {
 
 .github-title {
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 500;
   color: white;
   white-space: nowrap;
   overflow: hidden;
@@ -1937,7 +1937,7 @@ watch(() => props.mail, () => {
 
 .microsoft-title {
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 500;
   color: white;
   white-space: nowrap;
   overflow: hidden;
@@ -1994,7 +1994,7 @@ watch(() => props.mail, () => {
 
 .microsoft-email :deep(h1), .microsoft-email :deep(h2), .microsoft-email :deep(h3) {
   color: #333333;
-  font-weight: 600;
+  font-weight: 500;
   margin-top: 24px;
   margin-bottom: 16px;
   line-height: 1.3;
@@ -2040,7 +2040,7 @@ watch(() => props.mail, () => {
 
 .microsoft-email :deep(th) {
   background-color: #f5f7fa;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .microsoft-email :deep(ul), .microsoft-email :deep(ol) {
@@ -2119,7 +2119,7 @@ watch(() => props.mail, () => {
 .microsoft-email :deep([class*="verification"]),
 .microsoft-email :deep([class*="code"]) {
   font-size: 18px !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
   color: #333333 !important;
   margin: 16px 0 !important;
   padding: 8px 0 !important;
@@ -2150,7 +2150,7 @@ watch(() => props.mail, () => {
 
 .microsoft-email-new :deep(h1), .microsoft-email-new :deep(h2), .microsoft-email-new :deep(h3) {
   color: #333333;
-  font-weight: 600;
+  font-weight: 500;
   margin-top: 20px;
   margin-bottom: 12px;
   line-height: 1.3;
@@ -2196,7 +2196,7 @@ watch(() => props.mail, () => {
 
 .microsoft-email-new :deep(th) {
   background-color: #f5f7fa;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .microsoft-email-new :deep(ul), .microsoft-email-new :deep(ol) {
@@ -2221,7 +2221,7 @@ watch(() => props.mail, () => {
 .microsoft-email-new :deep([class*="verification"]),
 .microsoft-email-new :deep([class*="code"]) {
   font-size: 24px !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
   color: #333333 !important;
   margin: 24px 0 !important;
   padding: 12px 0 !important;
@@ -2290,7 +2290,7 @@ watch(() => props.mail, () => {
 
 .notion-title {
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 500;
   color: white;
   white-space: nowrap;
   overflow: hidden;
@@ -2310,7 +2310,7 @@ watch(() => props.mail, () => {
 
 .github-email :deep(h1), .github-email :deep(h2), .github-email :deep(h3) {
   color: #24292e;
-  font-weight: 600;
+  font-weight: 500;
   margin-top: 24px;
   margin-bottom: 16px;
   line-height: 1.25;
@@ -2347,7 +2347,7 @@ watch(() => props.mail, () => {
 
 .github-email :deep(th) {
   background-color: #f6f8fa;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .github-email :deep(ul), .github-email :deep(ol) {
@@ -2515,7 +2515,7 @@ watch(() => props.mail, () => {
 
   .github-title, .notion-title, .microsoft-title {
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 500;
   }
 
   .plain-content {

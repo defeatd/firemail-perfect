@@ -264,7 +264,7 @@ onMounted(() => {
   margin-bottom: 20px;
   color: #303133;
   text-align: center;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .search-bar {
@@ -290,7 +290,7 @@ onMounted(() => {
   font-size: 18px;
   margin: 0;
   color: #303133;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .result-info {
@@ -338,7 +338,7 @@ onMounted(() => {
 .label {
   width: 80px;
   color: #606266;
-  font-weight: bold;
+  font-weight: 500;
 }
 
 .value {
@@ -400,7 +400,7 @@ pre {
 
 :deep(.el-table th) {
   background-color: #f5f7fa;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 :deep(.el-table .cell) {

@@ -296,11 +296,11 @@ onUnmounted(() => {
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   color: var(--text-color);
   background: var(--neutral-100);
-  
-  line-height: 1.6;
+  font-weight: var(--font-weight-normal);
+  line-height: 1.55;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
@@ -357,8 +357,8 @@ body {
 
 .logo-text {
   font-size: 1.1rem;
-  font-weight: 650;
-  color: var(--neutral-800);
+  font-weight: var(--font-weight-medium);
+  color: var(--primary-text-color);
   letter-spacing: -0.02em;
 }
 
@@ -441,7 +441,7 @@ body {
   background: var(--primary-soft) !important;
   color: var(--primary-dark) !important;
   border-bottom: none !important;
-  font-weight: 560;
+  font-weight: var(--font-weight-medium);
 }
 
 /* Mobile Drawer */
@@ -462,7 +462,7 @@ body {
   align-items: center;
   gap: 0.5rem;
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--primary-color);
 }
 

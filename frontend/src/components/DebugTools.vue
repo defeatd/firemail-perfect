@@ -277,7 +277,7 @@ const testApiConnection = async () => {
 
 .label {
   width: 120px;
-  font-weight: bold;
+  font-weight: 500;
 }
 
 .cookie-controls {

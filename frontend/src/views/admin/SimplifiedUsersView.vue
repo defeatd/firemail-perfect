@@ -285,7 +285,7 @@ h1 {
   color: var(--neutral-800, #2C2A24);
   margin-bottom: 1rem;
   font-size: 1.35rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .toolbar {
@@ -314,7 +314,7 @@ h1 {
 
 .users-table th {
   background: var(--neutral-50, #FAF9F5);
-  font-weight: 560;
+  font-weight: 500;
   color: var(--neutral-500, #8A8374);
   font-size: 0.8rem;
 }
@@ -328,7 +328,7 @@ h1 {
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.85rem;
-  font-weight: 560;
+  font-weight: 500;
 }
 
 .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
@@ -388,7 +388,7 @@ h1 {
 .form-group label {
   display: block;
   margin-bottom: 6px;
-  font-weight: 560;
+  font-weight: 500;
   color: var(--neutral-700, #4A463C);
 }
 .form-group input {
@@ -413,7 +413,7 @@ h1 {
 
 .warning {
   color: #B56B5C;
-  font-weight: 560;
+  font-weight: 500;
 }
 
 .loading {

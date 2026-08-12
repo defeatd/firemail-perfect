@@ -268,7 +268,7 @@ const handleLogin = async () => {
 
 .login-title {
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #1E293B;
   margin: 0 0 0.5rem 0;
 }
@@ -311,7 +311,7 @@ const handleLogin = async () => {
   width: 100%;
   height: 48px;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 500;
   border-radius: 0.75rem;
   background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
   border: none;
@@ -340,7 +340,7 @@ const handleLogin = async () => {
 
 .register-link {
   color: var(--primary-color);
-  font-weight: 600;
+  font-weight: 500;
   text-decoration: none;
   margin-left: 0.5rem;
   transition: color 0.25s ease;

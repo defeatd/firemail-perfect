@@ -21,8 +21,8 @@
 }
 
 .app-title {
-  color: var(--neutral-800);
-  font-weight: 600;
+  color: var(--primary-text-color);
+  font-weight: var(--font-weight-medium);
   font-size: 1.35rem;
   margin-bottom: 1rem;
   letter-spacing: -0.02em;
@@ -31,8 +31,13 @@
 /* —— Element Plus：统一卡其，去掉花哨 —— */
 .el-button {
   border-radius: var(--radius-md);
-  font-weight: 500;
+  font-family: var(--font-sans) !important;
+  font-weight: var(--font-weight-normal) !important;
+  letter-spacing: -0.011em;
   transition: background-color var(--transition), border-color var(--transition), color var(--transition);
+  /* 默认按钮字色偏柔，避免刺眼纯黑 */
+  --el-button-text-color: var(--text-button);
+  color: var(--text-button);
 }
 
 .el-button:hover:not(:disabled),
@@ -120,15 +125,26 @@
 .el-button--info {
   --el-button-bg-color: var(--neutral-150) !important;
   --el-button-border-color: var(--neutral-200) !important;
-  --el-button-text-color: var(--neutral-700) !important;
+  --el-button-text-color: var(--text-button) !important;
   background: var(--neutral-150) !important;
   border-color: var(--neutral-200) !important;
-  color: var(--neutral-700) !important;
+  color: var(--text-button) !important;
 }
 
 .el-button--info:hover {
   background: var(--neutral-200) !important;
-  color: var(--neutral-800) !important;
+  color: var(--regular-text-color) !important;
+}
+
+/* 默认白底按钮 */
+.el-button--default {
+  --el-button-text-color: var(--text-button) !important;
+  color: var(--text-button) !important;
+  font-weight: var(--font-weight-normal) !important;
+}
+
+.el-button--default:hover:not(:disabled) {
+  color: var(--regular-text-color) !important;
 }
 
 .el-button.is-link,
@@ -146,13 +162,23 @@
 .el-button.is-text {
   background: transparent !important;
   border-color: transparent !important;
-  color: var(--neutral-700) !important;
+  color: var(--text-button) !important;
 }
 
-/* 表格内小按钮默认更清晰 */
+/* 表格内小按钮：柔和字色 */
 .el-table .el-button--small {
-  --el-button-text-color: var(--neutral-700);
-  color: var(--neutral-700);
+  --el-button-text-color: var(--text-button);
+  color: var(--text-button) !important;
+  font-weight: var(--font-weight-normal) !important;
+}
+
+.el-table .el-button--small.el-button--primary {
+  color: #fff !important;
+}
+
+.el-table .el-button--small.el-button--danger.is-plain,
+.el-table .el-button--small.el-button--danger {
+  color: #c47a6c !important;
 }
 
 .el-card {
@@ -191,8 +217,9 @@
   border-radius: 6px;
   border: 1px solid var(--border-color);
   background: var(--neutral-100);
-  color: var(--neutral-700);
-  font-weight: 500;
+  color: var(--text-button);
+  font-weight: var(--font-weight-normal);
+  font-family: var(--font-sans);
 }
 
 .el-tag--success,
@@ -202,7 +229,7 @@
 .el-tag--primary {
   --el-tag-bg-color: var(--neutral-100);
   --el-tag-border-color: var(--border-color);
-  --el-tag-text-color: var(--neutral-700);
+  --el-tag-text-color: var(--text-button);
 }
 
 .el-tag.el-tag--dark {
@@ -246,7 +273,7 @@
 .el-menu--horizontal > .el-menu-item.is-active {
   background: var(--primary-soft) !important;
   color: var(--primary-dark) !important;
-  font-weight: 560;
+  font-weight: var(--font-weight-medium);
   border-bottom: none !important;
 }
 
@@ -265,8 +292,8 @@
 
 .el-table th.el-table__cell {
   background: var(--neutral-50) !important;
-  color: var(--neutral-500);
-  font-weight: 560;
+  color: var(--secondary-text-color);
+  font-weight: var(--font-weight-medium);
   font-size: 12.5px;
 }
 
@@ -319,7 +346,7 @@
 
 .el-tabs__item.is-active {
   color: var(--primary-dark) !important;
-  font-weight: 560;
+  font-weight: var(--font-weight-medium);
 }
 
 .el-tabs__active-bar {

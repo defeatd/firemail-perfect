@@ -2014,7 +2014,7 @@ onUnmounted(() => {
 
 .email-table :deep(.el-table__header th) {
   background: transparent;
-  font-weight: 600;
+  font-weight: 500;
   color: #475569;
   padding: 14px 12px;
   border-bottom: 2px solid #E2E8F0;
@@ -2073,7 +2073,7 @@ onUnmounted(() => {
 
 .email-avatar span {
   color: white;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.95rem;
   text-transform: uppercase;
 }
@@ -2180,72 +2180,74 @@ onUnmounted(() => {
   align-items: stretch;
 }
 
-/* 统一操作按钮尺寸与默认外观 */
+/* 统一操作按钮尺寸与默认外观（Claude 式轻字重 + 柔和字色） */
 .action-row .btn-action.el-button {
   margin: 0 !important;
   flex: 1 1 0;
   min-width: 0;
   height: 28px !important;
   padding: 0 6px !important;
-  font-size: 12px !important;
-  font-weight: 500 !important;
+  font-family: var(--font-sans) !important;
+  font-size: 12.5px !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.011em;
   border-radius: 6px !important;
-  line-height: 26px !important;
+  line-height: 1 !important;
   box-sizing: border-box !important;
   white-space: nowrap;
 }
 
-/* 默认：检查 / 编辑 / 重新授权 —— 统一浅底描边 */
+/* 默认：检查 / 编辑 / 重新授权 —— 统一浅底描边，字色偏柔 */
 .action-row .btn-action.el-button:not(.btn-view):not(.btn-delete) {
   background: #fff !important;
   border: 1px solid #e0dbd0 !important;
-  color: #5c574e !important;
+  color: var(--text-button) !important;
 }
 
 .action-row .btn-action.el-button:not(.btn-view):not(.btn-delete):hover:not(:disabled) {
   background: #f7f4ec !important;
   border-color: #d0c9ba !important;
-  color: #3d3a34 !important;
+  color: var(--regular-text-color) !important;
 }
 
 .action-row .btn-action.el-button:not(.btn-view):not(.btn-delete).is-disabled,
 .action-row .btn-action.el-button:not(.btn-view):not(.btn-delete):disabled {
   opacity: 0.55;
   background: #f5f3ee !important;
-  color: #9a958c !important;
+  color: var(--text-button-muted) !important;
 }
 
 /* 仅「查看邮件」主色突出 */
 .action-row .btn-action.btn-view.el-button {
   background: var(--primary-color) !important;
   border: 1px solid var(--primary-color) !important;
-  color: #fff !important;
-  font-weight: 560 !important;
+  color: #faf8f4 !important;
+  font-weight: 400 !important;
 }
 
 .action-row .btn-action.btn-view.el-button:hover:not(:disabled) {
   background: var(--primary-light) !important;
   border-color: var(--primary-light) !important;
-  color: #fff !important;
+  color: #faf8f4 !important;
 }
 
-/* 删除：红色描边 */
+/* 删除：浅红描边 + 柔和红字 */
 .action-row .btn-action.btn-delete.el-button {
   background: #fff !important;
-  border: 1px solid #e8b4a8 !important;
-  color: #c45c48 !important;
+  border: 1px solid #e8c9c0 !important;
+  color: #c47a6c !important;
 }
 
 .action-row .btn-action.btn-delete.el-button:hover:not(:disabled) {
   background: #fdf3f0 !important;
-  border-color: #d98a78 !important;
-  color: #a84838 !important;
+  border-color: #d9a89c !important;
+  color: #b56b5c !important;
 }
 
 .auth-status-tag,
 .auth-inline-tag {
   border: 1px solid transparent !important;
-  font-weight: 560 !important;
+  font-weight: 400 !important;
   height: 22px !important;
   line-height: 20px !important;
   padding: 0 8px !important;
@@ -2559,7 +2561,7 @@ onUnmounted(() => {
 }
 
 .email-address {
-  font-weight: 600;
+  font-weight: 500;
   color: #1E293B;
   font-size: 0.95rem;
   word-break: break-all;
@@ -2762,7 +2764,7 @@ onUnmounted(() => {
 .user-code {
   display: inline-block;
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.08em;
   padding: 4px 10px;
   background: #fef3c7;

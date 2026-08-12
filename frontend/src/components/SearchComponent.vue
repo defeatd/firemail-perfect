@@ -119,7 +119,7 @@ onMounted(() => {
   margin-right: 16px;
   color: #606266;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 :deep(.el-checkbox__label) {

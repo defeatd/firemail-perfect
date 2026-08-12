@@ -29,7 +29,7 @@ export default {
 
 .nav-header {
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 500;
   margin-bottom: 12px;
   color: #333;
   border-bottom: 1px solid #eaeaea;

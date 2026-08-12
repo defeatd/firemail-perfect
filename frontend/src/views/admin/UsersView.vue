@@ -493,7 +493,7 @@ export default {
 
 .users-header h1 {
   font-size: 1.35rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--neutral-800, #2C2A24);
   margin: 0;
   letter-spacing: -0.02em;
@@ -540,7 +540,7 @@ export default {
 }
 
 .users-table th {
-  font-weight: 560;
+  font-weight: 500;
   color: var(--neutral-500, #8A8374);
   background: var(--neutral-50, #FAF9F5);
   font-size: 0.8rem;
@@ -566,7 +566,7 @@ export default {
   justify-content: center;
   padding: 8px 16px;
   font-size: 0.875rem;
-  font-weight: 560;
+  font-weight: 500;
   text-align: center;
   border-radius: 8px;
   cursor: pointer;
@@ -704,7 +704,7 @@ export default {
 .modal-header h2 {
   margin: 0;
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--neutral-800, #2C2A24);
 }
 
@@ -731,7 +731,7 @@ export default {
 .form-group label {
   display: block;
   margin-bottom: 6px;
-  font-weight: 560;
+  font-weight: 500;
   color: var(--neutral-700, #4A463C);
   font-size: 0.9rem;
 }

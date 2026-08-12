@@ -288,7 +288,7 @@ const handleQuickAction = (action) => {
 
 .welcome-title {
   font-size: 1.5rem;
-  font-weight: 600;
+  font-weight: 500;
   margin: 0 0 0.35rem 0;
   color: var(--neutral-900);
   letter-spacing: -0.02em;
@@ -388,7 +388,7 @@ const handleQuickAction = (action) => {
 
 .stat-number {
   font-size: 1.35rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--neutral-900);
   margin-bottom: 0.1rem;
   letter-spacing: -0.02em;
@@ -402,7 +402,7 @@ const handleQuickAction = (action) => {
 
 .section-title {
   font-size: 1.05rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--neutral-800);
   margin: 0 0 0.85rem 0;
 }
@@ -458,7 +458,7 @@ const handleQuickAction = (action) => {
 
 .feature-title {
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--neutral-900);
   margin: 0 0 0.2rem 0;
 }

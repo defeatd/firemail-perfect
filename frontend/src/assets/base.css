@@ -1,8 +1,18 @@
 /**
  * FireMail — Claude 式暖米 / 卡其
- * 原则：少色、扁平、轻阴影、无位移动画（避免卡顿）
+ * 原则：少色、扁平、轻阴影、无位移动画；字体对齐 claude.ai 系统栈与轻字重
  */
 :root {
+  /* 字体：与 claude.ai 一致的 system-ui 栈（含中文回退） */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei UI", "Microsoft YaHei", sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 500;
+  --font-weight-bold: 600;
+
   /* 主色：单一卡其，全站只用这一组做强调 */
   --primary-color: #9A8458;
   --primary-light: #B59A6A;
@@ -42,13 +52,15 @@
   --accent-coral: var(--primary-color);
   --accent-coral-soft: rgba(154, 132, 88, 0.1);
 
-  /* 文字 */
-  --primary-text-color: var(--neutral-900);
-  --regular-text-color: var(--neutral-700);
-  --secondary-text-color: var(--neutral-500);
-  --placeholder-text-color: var(--neutral-400);
-  --text-color: var(--neutral-900);
-  --text-secondary: var(--neutral-500);
+  /* 文字：避免纯黑，接近 Claude 柔和正文色 */
+  --primary-text-color: #3d3a34;
+  --regular-text-color: #5c574e;
+  --secondary-text-color: #8a8374;
+  --placeholder-text-color: #a39e90;
+  --text-color: #3d3a34;
+  --text-secondary: #8a8374;
+  --text-button: #6b6558;
+  --text-button-muted: #8a8374;
 
   /* 边框 / 背景 */
   --border-color-base: var(--neutral-200);
@@ -112,10 +124,10 @@
   --el-bg-color: #FFFEFB;
   --el-bg-color-page: #F4F1E8;
   --el-bg-color-overlay: #FFFEFB;
-  --el-text-color-primary: #1A1915;
-  --el-text-color-regular: #4A463C;
-  --el-text-color-secondary: #8A8374;
-  --el-text-color-placeholder: #B0A894;
+  --el-text-color-primary: #3d3a34;
+  --el-text-color-regular: #5c574e;
+  --el-text-color-secondary: #8a8374;
+  --el-text-color-placeholder: #a39e90;
   --el-border-color: #E5E0D2;
   --el-border-color-light: #EFEBE0;
   --el-border-color-lighter: #F4F1E8;
@@ -127,7 +139,8 @@
   --el-mask-color: rgba(44, 42, 36, 0.35);
   --el-box-shadow: 0 1px 3px rgba(44, 42, 36, 0.05);
   --el-box-shadow-light: 0 1px 2px rgba(44, 42, 36, 0.04);
-  --el-font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --el-font-family: var(--font-sans);
+  --el-font-weight-primary: 500;
   --el-border-radius-base: 8px;
   --el-border-radius-small: 6px;
   --el-border-radius-round: 16px;
@@ -152,11 +165,35 @@ body {
   color: var(--color-text);
   background: var(--neutral-100);
   line-height: 1.55;
-  font-family: var(--el-font-family);
-  font-size: 14.5px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: var(--font-weight-normal);
+  letter-spacing: -0.011em;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* 标题/加粗：Claude 式中等字重，避免过黑过粗 */
+h1, h2, h3, h4, h5, h6,
+.el-dialog__title,
+.page-title,
+.app-title {
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-medium);
+  color: var(--primary-text-color);
+  letter-spacing: -0.02em;
+}
+
+button,
+.el-button,
+input,
+textarea,
+select,
+.el-input,
+.el-table,
+.el-menu {
+  font-family: var(--font-sans);
 }
 
 /* 全局禁用会引发 reflow 的位移 hover */

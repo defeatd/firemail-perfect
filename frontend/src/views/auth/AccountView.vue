@@ -181,7 +181,7 @@ export default {
 
 .account-header h1 {
   font-size: 28px;
-  font-weight: 600;
+  font-weight: 500;
   color: #333;
 }
 
@@ -195,7 +195,7 @@ export default {
 
 .account-section h2 {
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 500;
   margin-bottom: 20px;
   color: #333;
 }

@@ -460,7 +460,7 @@ onMounted(() => {
 
 .email-title {
   font-size: 18px;
-  font-weight: bold;
+  font-weight: 500;
   color: var(--primary-color);
 }
 
@@ -502,7 +502,7 @@ onMounted(() => {
 }
 
 .subject {
-  font-weight: bold;
+  font-weight: 500;
   margin-right: 10px;
 }
 
