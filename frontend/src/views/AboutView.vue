@@ -7,7 +7,7 @@
     
     <el-row :gutter="20">
       <el-col :xs="24" :md="8">
-        <el-card class="info-card" shadow="hover">
+        <el-card class="info-card static-card" shadow="never">
           <template #header>
             <div class="card-header">
               <h2><el-icon><InfoFilled /></el-icon> 项目介绍</h2>
@@ -21,7 +21,7 @@
       </el-col>
       
       <el-col :xs="24" :md="8">
-        <el-card class="info-card" shadow="hover">
+        <el-card class="info-card static-card" shadow="never">
           <template #header>
             <div class="card-header">
               <h2><el-icon><TrendCharts /></el-icon> 版本信息</h2>
@@ -47,7 +47,7 @@
       </el-col>
       
       <el-col :xs="24" :md="8">
-        <el-card class="info-card" shadow="hover">
+        <el-card class="info-card static-card" shadow="never">
           <template #header>
             <div class="card-header">
               <h2><el-icon><Monitor /></el-icon> 技术栈</h2>
@@ -70,7 +70,7 @@
       </el-col>
     </el-row>
     
-    <el-card class="features-card" shadow="hover">
+    <el-card class="features-card static-card" shadow="never">
       <template #header>
         <div class="card-header">
           <h2><el-icon><Star /></el-icon> 功能特点</h2>
@@ -89,7 +89,7 @@
       </div>
     </el-card>
     
-    <el-card class="notice-card" shadow="hover">
+    <el-card class="notice-card static-card" shadow="never">
       <template #header>
         <div class="card-header">
           <h2><el-icon><Warning /></el-icon> 注意事项</h2>
@@ -209,14 +209,25 @@ const notices = [
   gap: 10px;
 }
 
-.info-card {
-  height: 100%;
-  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
-  margin-bottom: 20px;
+/* 纯展示卡片：无 hover 动效、无点击手势 */
+.static-card {
+  cursor: default;
+  transition: none !important;
 }
 
-.info-card:hover {
-  transform: translateY(-5px);
+.static-card:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.static-card :deep(.el-card__body),
+.static-card :deep(.el-card__header) {
+  cursor: default;
+}
+
+.info-card {
+  height: 100%;
+  margin-bottom: 20px;
 }
 
 .card-content {
@@ -261,6 +272,13 @@ const notices = [
 
 .tech-tag {
   margin-right: 0;
+  cursor: default;
+  transition: none !important;
+}
+
+.tech-tag:hover {
+  transform: none !important;
+  opacity: 1 !important;
 }
 
 .features-card {
@@ -278,12 +296,13 @@ const notices = [
   gap: 15px;
   padding: 15px;
   border-radius: var(--border-radius);
-  transition: background-color var(--transition-normal), transform var(--transition-normal);
+  cursor: default;
+  transition: none;
 }
 
 .feature-item:hover {
-  background-color: var(--border-color-lighter);
-  transform: translateX(5px);
+  background-color: transparent;
+  transform: none;
 }
 
 .feature-icon {
