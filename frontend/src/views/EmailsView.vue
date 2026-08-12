@@ -62,27 +62,55 @@
             reserve-selection
             class-name="selection-column"
           />
-          <el-table-column prop="email" label="邮箱地址" min-width="220" show-overflow-tooltip sortable="custom">
+          <el-table-column
+            prop="email"
+            label="邮箱地址"
+            min-width="150"
+            width="190"
+            sortable="custom"
+            class-name="email-column"
+          >
             <template #default="scope">
               <div class="email-cell">
-                <div class="email-avatar">
-                  <span>{{ scope.row.email.charAt(0).toUpperCase() }}</span>
-                </div>
                 <div class="email-main">
-                  <span class="email-text">{{ scope.row.email }}</span>
-                  <el-tag
-                    v-if="(scope.row.mail_type || 'outlook') === 'outlook'"
-                    size="small"
-                    class="auth-inline-tag"
-                    :class="authStatusClass(scope.row)"
+                  <button
+                    type="button"
+                    class="email-text email-copyable"
+                    :title="`点击复制：${scope.row.email}`"
+                    @click.stop="copyEmailAddress(scope.row.email)"
                   >
-                    {{ authStatusLabel(scope.row) }}
-                  </el-tag>
+                    {{ scope.row.email }}
+                  </button>
+                  <div class="email-meta-row">
+                    <el-tag
+                      v-if="(scope.row.mail_type || 'outlook') === 'outlook'"
+                      size="small"
+                      class="auth-inline-tag"
+                      :class="authStatusClass(scope.row)"
+                    >
+                      {{ authStatusLabel(scope.row) }}
+                    </el-tag>
+                    <el-button
+                      link
+                      type="primary"
+                      size="small"
+                      class="email-copy-btn"
+                      :icon="CopyDocument"
+                      title="复制邮箱"
+                      @click.stop="copyEmailAddress(scope.row.email)"
+                    />
+                  </div>
                 </div>
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="mail_type" label="类型" width="120" show-overflow-tooltip sortable="custom">
+          <el-table-column
+            prop="mail_type"
+            label="类型"
+            min-width="140"
+            sortable="custom"
+            class-name="type-column"
+          >
             <template #default="scope">
               <el-tag size="small" class="mail-type-tag" effect="plain">
                 {{ getMailTypeName(scope.row.mail_type || 'outlook') }}
@@ -107,9 +135,23 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="last_check_time" label="最后检查" width="158" sortable="custom">
+          <el-table-column
+            prop="last_check_time"
+            label="最后检查"
+            width="120"
+            align="center"
+            header-align="center"
+            sortable="custom"
+            class-name="time-column"
+          >
             <template #default="scope">
-              <span class="time-field">{{ formatDate(scope.row.last_check_time) }}</span>
+              <div class="time-field time-field-stack">
+                <template v-if="scope.row.last_check_time">
+                  <span class="time-date">{{ formatDatePart(scope.row.last_check_time) }}</span>
+                  <span class="time-clock">{{ formatTimePart(scope.row.last_check_time) }}</span>
+                </template>
+                <span v-else class="time-empty">无</span>
+              </div>
             </template>
           </el-table-column>
           <el-table-column label="授权" width="96" align="center">
@@ -684,7 +726,8 @@ import {
   Message,
   View,
   Hide,
-  InfoFilled
+  InfoFilled,
+  CopyDocument
 } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import DOMPurify from 'dompurify'
@@ -1577,6 +1620,30 @@ const formatDate = (dateString) => {
   return dayjs(dateString).format('YYYY-MM-DD HH:mm:ss');
 };
 
+const formatDatePart = (dateString) => {
+  if (!dateString) return '';
+  return dayjs(dateString).format('YYYY-MM-DD');
+};
+
+const formatTimePart = (dateString) => {
+  if (!dateString) return '';
+  return dayjs(dateString).format('HH:mm:ss');
+};
+
+const copyEmailAddress = async (email) => {
+  const text = String(email || '').trim();
+  if (!text) {
+    ElMessage.warning('邮箱地址为空');
+    return;
+  }
+  const ok = await copyTextToClipboard(text);
+  if (ok) {
+    ElMessage.success('邮箱已复制');
+  } else {
+    ElMessage.error('复制失败，请手动选择复制');
+  }
+};
+
 // 判断邮箱是否正在处理中
 const isEmailProcessing = (email) => {
   const status = emailsStore.getProcessingStatus(email.id)
@@ -1595,23 +1662,31 @@ const togglePasswordVisibility = async (row) => {
     return;
   }
 
-  // 否则，从后端获取密码
+  // 否则，从后端获取密码（列表接口已脱敏为 ******）
   if (!row.password || row.password === '******') {
     row.passwordLoading = true;
     try {
       const response = await emailsStore.getEmailPassword(row.id);
-      if (response && response.password) {
+      if (response && response.password != null && response.password !== '') {
         row.password = response.password;
+        row.showPassword = true;
+      } else {
+        ElMessage.warning('该邮箱未保存密码，或返回为空');
       }
     } catch (error) {
       console.error('获取密码失败:', error);
-      ElMessage.error('获取密码失败: ' + (error.message || '未知错误'));
+      const msg =
+        error?.response?.data?.error ||
+        error?.message ||
+        '未知错误';
+      ElMessage.error('获取密码失败: ' + msg);
     } finally {
       row.passwordLoading = false;
     }
+    return;
   }
 
-  // 显示密码
+  // 已有明文密码则直接显示
   row.showPassword = true;
 }
 
@@ -2055,36 +2130,80 @@ onUnmounted(() => {
   padding-right: 8px;
 }
 
-/* 邮箱地址单元格样式 */
+/* 邮箱地址：收窄、自动换行、可点击复制 */
+.email-table :deep(.email-column .cell) {
+  white-space: normal;
+  line-height: 1.35;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
 .email-cell {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: flex-start;
+  gap: 0;
+  min-width: 0;
+  width: 100%;
 }
 
-.email-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--primary-soft);
+.email-main {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: none;
-}
-
-.email-avatar span {
-  color: var(--primary-dark);
-  font-weight: 500;
-  font-size: 0.95rem;
-  text-transform: uppercase;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  width: 100%;
 }
 
 .email-text {
-  font-weight: 500;
+  font-weight: 400;
   color: var(--primary-text-color);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+button.email-copyable {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+button.email-copyable:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.email-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.email-copy-btn {
+  padding: 0 2px !important;
+  height: 20px !important;
+  min-height: 20px !important;
+  color: var(--text-button-muted) !important;
+}
+
+.email-copy-btn:hover {
+  color: var(--primary-dark) !important;
+}
+
+/* 类型列：自适应完整显示 */
+.email-table :deep(.type-column .cell) {
+  white-space: nowrap;
 }
 
 /* 增强按钮样式 */
@@ -2099,6 +2218,7 @@ onUnmounted(() => {
 }
 
 .mail-type-tag {
+  max-width: none !important;
   font-weight: 400 !important;
   white-space: nowrap;
   padding: 4px 12px;
@@ -2160,7 +2280,35 @@ onUnmounted(() => {
 
 .time-field {
   color: var(--secondary-text-color);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+}
+
+.time-field-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  line-height: 1.3;
+  width: 100%;
+  text-align: center;
+}
+
+.time-date,
+.time-clock {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.time-empty {
+  color: var(--text-button-muted);
+}
+
+.email-table :deep(.time-column .cell) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .progress-container {
@@ -2278,19 +2426,6 @@ onUnmounted(() => {
   background: var(--neutral-100) !important;
   color: var(--text-button) !important;
   border-color: var(--border-color) !important;
-}
-
-.email-main {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.email-main .email-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .auth-inline-tag {

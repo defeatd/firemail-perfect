@@ -980,21 +980,23 @@ def serve_frontend(path):
 def get_email_password(current_user, email_id):
     """获取指定邮箱的敏感凭证（密码 / refresh_token 等，按需下发）"""
     try:
+        # sqlite3.Row 无 .get，统一转 dict
+        user_info = dict(current_user) if current_user is not None else {}
         email = db.get_email_by_id(
-            email_id, None if current_user['is_admin'] else current_user['id']
+            email_id, None if user_info.get('is_admin') else user_info.get('id')
         )
         if not email:
             logger.warning(
-                f"凭证访问拒绝: user={current_user.get('username')} "
-                f"user_id={current_user.get('id')} email_id={email_id}"
+                f"凭证访问拒绝: user={user_info.get('username')} "
+                f"user_id={user_info.get('id')} email_id={email_id}"
             )
             return jsonify({'error': '邮箱不存在或您没有权限'}), 404
 
         email_data = dict(email)
         # 审计日志：不记录凭证内容，仅记录谁拉取了哪个邮箱
         logger.info(
-            f"[AUDIT] 凭证下发: user={current_user.get('username')} "
-            f"user_id={current_user.get('id')} email_id={email_id} "
+            f"[AUDIT] 凭证下发: user={user_info.get('username')} "
+            f"user_id={user_info.get('id')} email_id={email_id} "
             f"email={email_data.get('email')} mail_type={email_data.get('mail_type')} "
             f"ip={request.remote_addr}"
         )
