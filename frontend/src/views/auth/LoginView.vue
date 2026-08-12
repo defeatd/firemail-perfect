@@ -175,8 +175,8 @@ const handleLogin = async () => {
 .bg-gradient {
   position: fixed;
   inset: 0;
-  background: linear-gradient(145deg, #E8E2D4 0%, #D4C4A8 40%, #C4A974 70%, #A68B5B 100%);
-
+  /* 浅色背景，避免过重的棕金渐变 */
+  background: linear-gradient(160deg, #FBF9F4 0%, #F5F1E8 45%, #EFE9DC 100%);
   z-index: -2;
 }
 
@@ -190,7 +190,7 @@ const handleLogin = async () => {
 .shape {
   position: absolute;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(166, 139, 91, 0.06);
   animation: float 20s infinite ease-in-out;
 }
 
@@ -227,12 +227,13 @@ const handleLogin = async () => {
 .login-card {
   width: 100%;
   max-width: 420px;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: 1.5rem;
   padding: 2.5rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(224, 219, 208, 0.8);
+  box-shadow: 0 12px 32px -8px rgba(44, 42, 36, 0.08);
   animation: slideUp 0.5s ease-out;
 }
 

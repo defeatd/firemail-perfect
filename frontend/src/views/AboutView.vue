@@ -96,15 +96,14 @@
         </div>
       </template>
       <div class="notice-content">
-        <el-alert
+        <div
           v-for="(notice, index) in notices"
           :key="index"
-          :title="notice"
-          :type="noticeTypes[index % noticeTypes.length]"
-          :closable="false"
-          show-icon
-          class="notice-alert"
-        />
+          class="notice-item"
+        >
+          <el-icon class="notice-icon"><InfoFilled /></el-icon>
+          <span class="notice-text">{{ notice }}</span>
+        </div>
       </div>
     </el-card>
   </div>
@@ -151,8 +150,6 @@ const notices = [
   '邮箱账号和密码等敏感信息仅存储在本地SQLite数据库中，请确保服务器安全',
   '由于Microsoft API限制，可能会有请求频率限制，请合理使用'
 ]
-
-const noticeTypes = ['warning', 'info', 'error']
 </script>
 
 <style scoped>
@@ -323,8 +320,30 @@ const noticeTypes = ['warning', 'info', 'error']
   gap: 10px;
 }
 
-.notice-alert {
-  margin: 0;
+/* 注意事项统一浅色，不突出警示色 */
+.notice-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #F7F4EC;
+  border: 1px solid #E8E2D4;
+  color: #5c574e;
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.notice-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #A68B5B;
+  font-size: 16px;
+}
+
+.notice-text {
+  flex: 1;
+  min-width: 0;
 }
 
 @media (max-width: 768px) {
