@@ -7,9 +7,10 @@ services:
     container_name: firemail
     restart: unless-stopped
     ports:
+      # 仅绑定本机回环，外网/局域网不可达
       # 主机端口:容器端口（容器内 Caddy 监听 80）
-      # 默认 11180；修改左侧端口即可，例如 "80:80"、"8080:80"
-      - "11180:80"
+      # 默认 127.0.0.1:11180；改端口示例 "127.0.0.1:8080:80"
+      - "127.0.0.1:11180:80"
     volumes:
       - ./data:/app/backend/data
       - ./logs:/app/logs
