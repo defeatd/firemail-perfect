@@ -1,6 +1,5 @@
 Flask==2.3.3
 Flask-Cors==4.0.0
-Flask-Limiter==3.5.0
 websockets==11.0.3
 requests==2.31.0
 beautifulsoup4==4.12.2

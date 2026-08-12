@@ -14,7 +14,7 @@
 
 ```
 backend/
-├── app.py                  # 应用入口：路由、鉴权、限流
+├── app.py                  # 应用入口：路由、鉴权
 ├── jwt_config.py           # Flask / WebSocket 共享 JWT 密钥
 ├── database/               # 数据库相关模块
 │   └── db.py               # SQLite 操作类

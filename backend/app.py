@@ -10,8 +10,6 @@ import jwt
 from functools import wraps
 from flask import Flask, send_from_directory, jsonify, request, Response, make_response
 from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 from database.db import Database
 from utils.email import EmailBatchProcessor
 from ws_server.handler import WebSocketHandler
@@ -36,14 +34,6 @@ os.makedirs(data_dir, exist_ok=True)
 
 # 初始化Flask应用
 app = Flask(__name__)
-
-# 速率限制：默认不限（SPA 列表/轮询易触发 429）；敏感接口单独限速
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=[],
-    storage_uri="memory://"
-)
 
 # 安全修复：CORS 配置从环境变量读取允许的域
 ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5000,http://127.0.0.1').split(',')
@@ -160,7 +150,6 @@ def admin_required(f):
 
 # 认证相关API
 @app.route('/api/auth/login', methods=['POST'])
-@limiter.limit("5 per minute")  # 安全修复：登录接口严格限速
 def login():
     """用户登录"""
     try:
@@ -242,7 +231,6 @@ def logout():
     return response
 
 @app.route('/api/auth/register', methods=['POST'])
-@limiter.limit("3 per minute")  # 安全修复：注册接口严格限速
 def register():
     """用户注册"""
     # 检查系统是否允许注册
@@ -409,7 +397,6 @@ def reset_user_password(current_user, user_id):
 
 # 修改现有API以加入用户认证和授权
 @app.route('/api/health', methods=['GET'])
-@limiter.exempt  # 健康检查不受限流，避免 Docker healthcheck 被 429
 def health_check():
     """健康检查接口"""
     return jsonify({'status': 'ok', 'message': '花火邮箱助手服务正在运行'})
@@ -919,7 +906,6 @@ def upload_email_file(current_user, email_id):
 
 @app.route('/api/emails/import', methods=['POST'])
 @token_required
-@limiter.limit("10 per minute")
 def import_emails(current_user):
     """批量导入邮箱（Outlook 会先校验 token，无效账号不入库并返回失败详情）"""
     payload = request.json or {}
@@ -991,7 +977,6 @@ def serve_frontend(path):
 @app.route('/api/emails/<int:email_id>/password', methods=['GET'])
 @app.route('/api/emails/<int:email_id>/credentials', methods=['GET'])
 @token_required
-@limiter.limit("30 per minute")  # 敏感凭证接口严格限速，防止批量拉取
 def get_email_password(current_user, email_id):
     """获取指定邮箱的敏感凭证（密码 / refresh_token 等，按需下发）"""
     try:
@@ -1269,7 +1254,6 @@ def refresh_outlook_email_token(current_user, email_id):
 
 @app.route('/api/emails/<int:email_id>/oauth/device/start', methods=['POST'])
 @token_required
-@limiter.limit("20 per minute")
 def start_email_device_code_reauth(current_user, email_id):
     """
     为已有 Outlook 邮箱发起 Device Code 重新授权。
@@ -1305,7 +1289,6 @@ def start_email_device_code_reauth(current_user, email_id):
 
 @app.route('/api/oauth/device/start', methods=['POST'])
 @token_required
-@limiter.limit("20 per minute")
 def start_device_code_add_outlook(current_user):
     """
     通过 Device Code 新增 Outlook 邮箱（无需事先准备 refresh_token）。

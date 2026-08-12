@@ -136,7 +136,7 @@ git pull && docker compose up --build -d   # 更新代码后重建
 
 - 用户登录密码：PBKDF2-SHA256 哈希存储
 - 生产环境强制 `JWT_SECRET_KEY`，禁止默认密钥
-- 登录 / 注册接口限流；可配置 CORS
+- 可配置 CORS
 - 邮箱列表 API 对 `password` / `access_token` 脱敏（密码需单独接口获取）
 - **不要**把 `.env`、`data/*.db`、`logs/` 提交到 Git（已在 `.gitignore`）
 

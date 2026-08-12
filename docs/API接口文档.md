@@ -37,7 +37,7 @@
 
 - JWT 必须在生产环境自定义
 - 邮箱列表 API 对 `password` 脱敏
-- 登录 / 注册接口限流
+- 接口无限速（私有部署默认）
 - 附件下载 Content-Disposition 安全
 
 ---
