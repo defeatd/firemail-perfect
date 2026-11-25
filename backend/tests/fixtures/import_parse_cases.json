@@ -1,0 +1,326 @@
+{
+  "line_cases": [
+    {
+      "name": "standard_4_part",
+      "raw": "Alice@Outlook.com----Pass123!----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-FAKE_STD_TOKEN_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+      "line_no": 1,
+      "separator": "auto",
+      "expect": {
+        "email": "alice@outlook.com",
+        "password": "Pass123!",
+        "client_id": "9e5f94bc-e8a4-4e73-b8be-63364c29d753",
+        "refresh_token": "M.C512_BAY.0.U.-FAKE_STD_TOKEN_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+        "recovery_email": "",
+        "recovery_password": "",
+        "separator": "----",
+        "error": ""
+      }
+    },
+    {
+      "name": "passwordless_3_part",
+      "raw": "bob@hotmail.com----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-PASSWORDLESS_TOKEN_0123456789ABCDEFGHIJKLMN",
+      "line_no": 2,
+      "separator": "auto",
+      "expect": {
+        "email": "bob@hotmail.com",
+        "password": "",
+        "client_id": "9e5f94bc-e8a4-4e73-b8be-63364c29d753",
+        "refresh_token": "M.C512_BAY.0.U.-PASSWORDLESS_TOKEN_0123456789ABCDEFGHIJKLMN",
+        "recovery_email": "",
+        "recovery_password": "",
+        "separator": "----",
+        "error": ""
+      }
+    },
+    {
+      "name": "five_part_with_recovery_email",
+      "raw": "carol@live.com----P@ss5----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-FIVE_PART_TOKEN_0123456789ABCDEFGHIJKLMNOPQ----Backup@Example.COM",
+      "line_no": 3,
+      "separator": "auto",
+      "expect": {
+        "email": "carol@live.com",
+        "password": "P@ss5",
+        "client_id": "9e5f94bc-e8a4-4e73-b8be-63364c29d753",
+        "refresh_token": "M.C512_BAY.0.U.-FIVE_PART_TOKEN_0123456789ABCDEFGHIJKLMNOPQ",
+        "recovery_email": "backup@example.com",
+        "recovery_password": "",
+        "separator": "----",
+        "error": ""
+      }
+    },
+    {
+      "name": "six_part_with_recovery_email_and_password",
+      "raw": "dave@msn.com----P@ss6----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-SIX_PART_TOKEN_0123456789ABCDEFGHIJKLMNOPQR----rec@gmail.com----RecPwd#99",
+      "line_no": 4,
+      "separator": "auto",
+      "expect": {
+        "email": "dave@msn.com",
+        "password": "P@ss6",
+        "client_id": "9e5f94bc-e8a4-4e73-b8be-63364c29d753",
+        "refresh_token": "M.C512_BAY.0.U.-SIX_PART_TOKEN_0123456789ABCDEFGHIJKLMNOPQR",
+        "recovery_email": "rec@gmail.com",
+        "recovery_password": "RecPwd#99",
+        "separator": "----",
+        "error": ""
+      }
+    },
+    {
+      "name": "token_containing_separator",
+      "raw": "erin@outlook.com----Pass123----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-PART1----PART2_LONGER_THAN_FIFTY_CHARS_12345",
+      "line_no": 5,
+      "separator": "auto",
+      "expect": {
+        "email": "erin@outlook.com",
+        "password": "Pass123",
+        "client_id": "9e5f94bc-e8a4-4e73-b8be-63364c29d753",
+        "refresh_token": "M.C512_BAY.0.U.-PART1----PART2_LONGER_THAN_FIFTY_CHARS_12345",
+        "recovery_email": "",
+        "recovery_password": "",
+        "separator": "----",
+        "error": ""
+      }
+    },
+    {
+      "name": "password_containing_separator",
+      "raw": "frank@outlook.com----my----weird----pass----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-PASSWORD_WITH_SEP_TOKEN_0123456789ABCDEFGH",
+      "line_no": 6,
+      "separator": "auto",
+      "expect": {
+        "email": "frank@outlook.com",
+        "password": "my----weird----pass",
+        "client_id": "9e5f94bc-e8a4-4e73-b8be-63364c29d753",
+        "refresh_token": "M.C512_BAY.0.U.-PASSWORD_WITH_SEP_TOKEN_0123456789ABCDEFGH",
+        "recovery_email": "",
+        "recovery_password": "",
+        "separator": "----",
+        "error": ""
+      }
+    },
+    {
+      "name": "swapped_token_and_client_id_4_part",
+      "raw": "grace@outlook.com----Pass99----M.C512_BAY.0.U.-SWAPPED_TOKEN_FOUR_PART_0123456789ABCDEFGH----9e5f94bc-e8a4-4e73-b8be-63364c29d753",
+      "line_no": 7,
+      "separator": "auto",
+      "expect": {
+        "email": "grace@outlook.com",
+        "password": "Pass99",
+        "client_id": "9e5f94bc-e8a4-4e73-b8be-63364c29d753",
+        "refresh_token": "M.C512_BAY.0.U.-SWAPPED_TOKEN_FOUR_PART_0123456789ABCDEFGH",
+        "recovery_email": "",
+        "recovery_password": "",
+        "separator": "----",
+        "error": ""
+      }
+    },
+    {
+      "name": "swapped_token_and_client_id_3_part",
+      "raw": "heidi@outlook.com----M.C512_BAY.0.U.-SWAPPED_TOKEN_THREE_PART_0123456789ABCDEFG----9e5f94bc-e8a4-4e73-b8be-63364c29d753",
+      "line_no": 8,
+      "separator": "auto",
+      "expect": {
+        "email": "heidi@outlook.com",
+        "password": "",
+        "client_id": "9e5f94bc-e8a4-4e73-b8be-63364c29d753",
+        "refresh_token": "M.C512_BAY.0.U.-SWAPPED_TOKEN_THREE_PART_0123456789ABCDEFG",
+        "recovery_email": "",
+        "recovery_password": "",
+        "separator": "----",
+        "error": ""
+      }
+    },
+    {
+      "name": "tab_separator_auto_preserves_colon_password",
+      "raw": "ivan@outlook.com\tPass:with:colon\t9e5f94bc-e8a4-4e73-b8be-63364c29d753\tM.C512_BAY.0.U.-TAB_SEPARATED_TOKEN_0123456789ABCDEFGHIJKL",
+      "line_no": 9,
+      "separator": "auto",
+      "expect": {
+        "email": "ivan@outlook.com",
+        "password": "Pass:with:colon",
+        "client_id": "9e5f94bc-e8a4-4e73-b8be-63364c29d753",
+        "refresh_token": "M.C512_BAY.0.U.-TAB_SEPARATED_TOKEN_0123456789ABCDEFGHIJKL",
+        "recovery_email": "",
+        "recovery_password": "",
+        "separator": "\t",
+        "error": ""
+      }
+    },
+    {
+      "name": "pipe_separator_auto",
+      "raw": "judy@hotmail.com|PipePass|9e5f94bc-e8a4-4e73-b8be-63364c29d753|M.C512_BAY.0.U.-PIPE_SEPARATED_TOKEN_0123456789ABCDEFGHIJK",
+      "line_no": 10,
+      "separator": "auto",
+      "expect": {
+        "email": "judy@hotmail.com",
+        "password": "PipePass",
+        "client_id": "9e5f94bc-e8a4-4e73-b8be-63364c29d753",
+        "refresh_token": "M.C512_BAY.0.U.-PIPE_SEPARATED_TOKEN_0123456789ABCDEFGHIJK",
+        "recovery_email": "",
+        "recovery_password": "",
+        "separator": "|",
+        "error": ""
+      }
+    },
+    {
+      "name": "colon_separator_explicit",
+      "raw": "ken@outlook.com:ColonPass:9e5f94bc-e8a4-4e73-b8be-63364c29d753:M.C512_BAY.0.U.-COLON_EXPLICIT_TOKEN_0123456789ABCDEFGHIJK",
+      "line_no": 11,
+      "separator": ":",
+      "expect": {
+        "email": "ken@outlook.com",
+        "password": "ColonPass",
+        "client_id": "9e5f94bc-e8a4-4e73-b8be-63364c29d753",
+        "refresh_token": "M.C512_BAY.0.U.-COLON_EXPLICIT_TOKEN_0123456789ABCDEFGHIJK",
+        "recovery_email": "",
+        "recovery_password": "",
+        "separator": ":",
+        "error": ""
+      }
+    },
+    {
+      "name": "colon_not_auto_detected",
+      "raw": "ken@outlook.com:ColonPass:9e5f94bc-e8a4-4e73-b8be-63364c29d753:M.C512_BAY.0.U.-COLON_EXPLICIT_TOKEN_0123456789ABCDEFGHIJK",
+      "line_no": 12,
+      "separator": "auto",
+      "expect": {
+        "error_contains": "分隔符"
+      }
+    },
+    {
+      "name": "bom_and_crlf_trimmed",
+      "raw": "\ufeff  bom@outlook.com----BomPass----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-BOM_CRLF_TOKEN_0123456789ABCDEFGHIJKLMNOPQ  \r",
+      "line_no": 13,
+      "separator": "auto",
+      "expect": {
+        "email": "bom@outlook.com",
+        "password": "BomPass",
+        "client_id": "9e5f94bc-e8a4-4e73-b8be-63364c29d753",
+        "refresh_token": "M.C512_BAY.0.U.-BOM_CRLF_TOKEN_0123456789ABCDEFGHIJKLMNOPQ",
+        "recovery_email": "",
+        "recovery_password": "",
+        "separator": "----",
+        "error": ""
+      }
+    },
+    {
+      "name": "trailing_empty_segments_stripped",
+      "raw": "trail@outlook.com----Pass----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-TRAILING_EMPTY_TOKEN_0123456789ABCDEFGHIJK----",
+      "line_no": 14,
+      "separator": "auto",
+      "expect": {
+        "email": "trail@outlook.com",
+        "password": "Pass",
+        "client_id": "9e5f94bc-e8a4-4e73-b8be-63364c29d753",
+        "refresh_token": "M.C512_BAY.0.U.-TRAILING_EMPTY_TOKEN_0123456789ABCDEFGHIJK",
+        "recovery_email": "",
+        "recovery_password": "",
+        "separator": "----",
+        "error": ""
+      }
+    },
+    {
+      "name": "invalid_email",
+      "raw": "not-an-email----Pass----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-VALID_LENGTH_TOKEN_0123456789ABCDEFGHIJKLM",
+      "line_no": 15,
+      "separator": "auto",
+      "expect": {
+        "error_contains": "邮箱格式非法"
+      }
+    },
+    {
+      "name": "invalid_guid",
+      "raw": "badguid@outlook.com----Pass----not-a-guid-value----M.C512_BAY.0.U.-VALID_LENGTH_TOKEN_0123456789ABCDEFGHIJKLM",
+      "line_no": 16,
+      "separator": "auto",
+      "expect": {
+        "error_contains": "未找到合法的 client_id(GUID)"
+      }
+    },
+    {
+      "name": "token_too_short",
+      "raw": "short@outlook.com----Pass----9e5f94bc-e8a4-4e73-b8be-63364c29d753----short_token_12345",
+      "line_no": 17,
+      "separator": "auto",
+      "expect": {
+        "error_contains": "授权码长度不足 50（实际 17）"
+      }
+    },
+    {
+      "name": "token_equals_client_id",
+      "raw": "samecid@outlook.com----Pass----9e5f94bc-e8a4-4e73-b8be-63364c29d753----9e5f94bc-e8a4-4e73-b8be-63364c29d753",
+      "line_no": 18,
+      "separator": "auto",
+      "expect": {
+        "error_contains": "不能与 client_id 相同"
+      }
+    },
+    {
+      "name": "too_few_segments",
+      "raw": "onlytwo@outlook.com----justpassword",
+      "line_no": 19,
+      "separator": "auto",
+      "expect": {
+        "error_contains": "分隔符"
+      }
+    }
+  ],
+  "text_cases": [
+    {
+      "name": "dedup_keeps_last_and_skips_blanks",
+      "text": "\ufeffdup@outlook.com----OldPass----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-OLD_TOKEN_0123456789ABCDEFGHIJKLMNOPQRSTUV\r\n\r\n   \r\nok@outlook.com----OkPass----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-OK_TOKEN_0123456789ABCDEFGHIJKLMNOPQRSTUVW\r\nDUP@outlook.com----NewPass----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-NEW_TOKEN_0123456789ABCDEFGHIJKLMNOPQRSTUV",
+      "separator": "auto",
+      "max_rows": 5000,
+      "expect": {
+        "total_non_empty": 3,
+        "over_limit": false,
+        "rows_emails": ["ok@outlook.com", "dup@outlook.com"],
+        "rows_lines": [4, 5],
+        "invalid_lines": [],
+        "duplicates_lines": [1],
+        "conflict_lines": [],
+        "last_row_password": "NewPass"
+      }
+    },
+    {
+      "name": "same_email_same_token_is_duplicate_not_conflict",
+      "text": "same@outlook.com----Pass1----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-SAME_TOKEN_0123456789ABCDEFGHIJKLMNOPQRSTU\nsame@outlook.com----Pass2----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-SAME_TOKEN_0123456789ABCDEFGHIJKLMNOPQRSTU",
+      "separator": "auto",
+      "max_rows": 5000,
+      "expect": {
+        "total_non_empty": 2,
+        "over_limit": false,
+        "rows_emails": ["same@outlook.com"],
+        "rows_lines": [2],
+        "invalid_lines": [],
+        "duplicates_lines": [1],
+        "conflict_lines": [],
+        "last_row_password": "Pass2"
+      }
+    },
+    {
+      "name": "cross_email_token_conflict_rejected",
+      "text": "user1@outlook.com----Pass1----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-SHARED_TOKEN_0123456789ABCDEFGHIJKLMNOPQRS\nuser2@outlook.com----Pass2----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-SHARED_TOKEN_0123456789ABCDEFGHIJKLMNOPQRS\nuser3@outlook.com----Pass3----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-UNIQUE_TOKEN_0123456789ABCDEFGHIJKLMNOPQRS",
+      "separator": "auto",
+      "max_rows": 5000,
+      "expect": {
+        "total_non_empty": 3,
+        "over_limit": false,
+        "rows_emails": ["user3@outlook.com"],
+        "rows_lines": [3],
+        "invalid_lines": [],
+        "duplicates_lines": [],
+        "conflict_lines": [1, 2],
+        "last_row_password": "Pass3"
+      }
+    },
+    {
+      "name": "over_limit_flag_triggered",
+      "text": "u1@outlook.com----P----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-LIMIT_TOKEN_1_0123456789ABCDEFGHIJKLMNOPQR\nu2@outlook.com----P----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-LIMIT_TOKEN_2_0123456789ABCDEFGHIJKLMNOPQR\nu3@outlook.com----P----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-LIMIT_TOKEN_3_0123456789ABCDEFGHIJKLMNOPQR\nu4@outlook.com----P----9e5f94bc-e8a4-4e73-b8be-63364c29d753----M.C512_BAY.0.U.-LIMIT_TOKEN_4_0123456789ABCDEFGHIJKLMNOPQR",
+      "separator": "auto",
+      "max_rows": 3,
+      "expect": {
+        "total_non_empty": 4,
+        "over_limit": true
+      }
+    }
+  ]
+}

@@ -1,609 +1,345 @@
 <template>
-  <div class="dashboard-container">
-    <!-- 欢迎区域 -->
-    <div class="welcome-section">
-      <div class="welcome-card">
-        <div class="welcome-content">
-          <div class="welcome-text">
-            <h1 class="welcome-title">欢迎回来！</h1>
-            <p class="welcome-subtitle">管理您的邮箱，掌控您的邮件</p>
-          </div>
-          <div class="welcome-actions">
-            <el-button
-              type="primary"
-              size="large"
-              @click="navigateToEmails"
-              class="action-btn primary-action"
-              :icon="Message"
-            >
-              邮箱管理
-            </el-button>
-            <el-button
-              size="large"
-              @click="navigateToSearch"
-              class="action-btn secondary-action"
-              :icon="Search"
-            >
-              搜索邮件
-            </el-button>
-          </div>
-        </div>
-        <div class="welcome-decoration">
-          <div class="decoration-circle circle-1"></div>
-          <div class="decoration-circle circle-2"></div>
-          <div class="decoration-circle circle-3"></div>
-        </div>
-      </div>
-    </div>
+  <div class="fm-home-view">
+    <PageHeader title="指挥台" :subtitle="greetingSubtitle">
+      <template #actions>
+        <el-button @click="router.push('/import')">
+          <el-icon><Upload /></el-icon>
+          <span>批量导入</span>
+        </el-button>
+        <el-button type="primary" @click="router.push('/emails?action=add')">
+          <el-icon><Plus /></el-icon>
+          <span>添加邮箱</span>
+        </el-button>
+      </template>
+    </PageHeader>
 
-    <!-- 快速统计 -->
-    <div class="stats-section">
-      <div class="stats-grid">
-        <div class="stat-card" v-for="(stat, index) in stats" :key="index">
-          <div class="stat-icon" :class="stat.iconClass">
-            <el-icon :size="24"><component :is="stat.icon" /></el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-number">{{ stat.value }}</div>
-            <div class="stat-label">{{ stat.label }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <section class="fm-home-stats" aria-label="核心指标">
+      <StatCard label="邮箱账户" :value="stats.email_count" :loading="statsLoading" />
+      <StatCard label="邮件总数" :value="stats.total_mails" :loading="statsLoading" />
+      <StatCard
+        label="已检查覆盖率"
+        :value="stats.success_rate"
+        unit="%"
+        :loading="statsLoading"
+      />
+      <StatCard
+        label="服务状态"
+        :value="stats.status === 'online' ? '在线' : stats.status || '未知'"
+        :tone="stats.status === 'online' ? 'success' : 'warning'"
+        :loading="statsLoading"
+      >
+        <template #footer>
+          <StatusPill :tone="wsPill.tone" size="sm">{{ wsPill.label }}</StatusPill>
+        </template>
+      </StatCard>
+    </section>
 
-    <!-- 功能卡片 -->
-    <div class="features-section">
-      <h2 class="section-title">功能中心</h2>
-      <div class="features-grid">
-        <div
-          class="feature-card"
-          v-for="(feature, index) in features"
-          :key="index"
-          @click="handleFeatureClick(feature)"
-        >
-          <div class="feature-icon" :class="feature.colorClass">
-            <el-icon :size="28"><component :is="feature.icon" /></el-icon>
-          </div>
-          <div class="feature-content">
-            <h3 class="feature-title">{{ feature.title }}</h3>
-            <p class="feature-description">{{ feature.description }}</p>
-          </div>
-          <div class="feature-arrow">
-            <el-icon><ArrowRight /></el-icon>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div class="fm-home-grid">
+      <TokenPostureCard
+        :health="emails.tokenHealth || {}"
+        :keeper="emails.tokenKeeper || {}"
+      />
 
-    <!-- 快速操作 -->
-    <div class="quick-actions-section">
-      <h2 class="section-title">快速操作</h2>
-      <div class="quick-actions-grid">
-        <div
-          class="quick-action-card"
-          v-for="(action, index) in quickActions"
-          :key="index"
-          @click="handleQuickAction(action)"
-        >
-          <div class="quick-action-icon" :class="action.colorClass">
-            <el-icon :size="20"><component :is="action.icon" /></el-icon>
+      <section class="fm-card fm-quick-card">
+        <div class="fm-card-head">
+          <div>
+            <h2 class="fm-card-title">快捷操作</h2>
+            <p class="fm-card-sub">常用高频工作流入口</p>
           </div>
-          <span class="quick-action-text">{{ action.text }}</span>
         </div>
-      </div>
+
+        <div class="fm-quick-list">
+          <button
+            v-for="act in quickActions"
+            :key="act.key"
+            type="button"
+            class="fm-quick-btn"
+            :disabled="act.key === 'check-all' && checkingAll"
+            @click="act.handler"
+          >
+            <span class="fm-quick-btn__icon">
+              <el-icon :size="16"><component :is="act.icon" /></el-icon>
+            </span>
+            <span class="fm-quick-btn__body">
+              <span class="fm-quick-btn__title">{{ act.title }}</span>
+              <span class="fm-quick-btn__desc">{{ act.desc }}</span>
+            </span>
+            <el-icon class="fm-quick-btn__arrow" :size="14"><ArrowRight /></el-icon>
+          </button>
+        </div>
+      </section>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Message, Search, Plus, Setting, Document,
-  User, DataAnalysis, Connection, ArrowRight,
-  Refresh, Download
+  Plus,
+  Upload,
+  Download,
+  RefreshRight,
+  User,
+  Setting,
+  ArrowRight
 } from '@element-plus/icons-vue'
 import api from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+import { useEmailsStore } from '@/stores/emails'
+import { useWsStore } from '@/stores/ws'
+import { usePolling } from '@/composables/usePolling'
+import PageHeader from '@/components/common/PageHeader.vue'
+import StatCard from '@/components/common/StatCard.vue'
+import StatusPill from '@/components/common/StatusPill.vue'
+import TokenPostureCard from '@/components/home/TokenPostureCard.vue'
 
 const router = useRouter()
+const auth = useAuthStore()
+const emails = useEmailsStore()
+const ws = useWsStore()
 
-// 统计数据
-const stats = ref([
-  {
-    icon: 'Message',
-    value: '-',
-    label: '邮箱账户',
-    iconClass: 'stat-icon-primary'
-  },
-  {
-    icon: 'Document',
-    value: '-',
-    label: '邮件总数',
-    iconClass: 'stat-icon-success'
-  },
-  {
-    icon: 'DataAnalysis',
-    value: '-',
-    label: '收信成功率',
-    iconClass: 'stat-icon-warning'
-  },
-  {
-    icon: 'Connection',
-    value: '-',
-    label: '服务状态',
-    iconClass: 'stat-icon-info'
-  }
-])
-
-// 获取统计数据
-const fetchStats = async () => {
-  try {
-    const response = await api.getStats()
-    if (response.data) {
-      const data = response.data
-      stats.value[0].value = data.email_count.toLocaleString()
-      stats.value[1].value = data.total_mails.toLocaleString()
-      stats.value[2].value = data.success_rate + '%'
-      stats.value[3].value = data.status === 'online' ? '在线' : '离线'
-    }
-  } catch (error) {
-    console.error('获取统计数据失败:', error)
-    // 保持默认的 '-' 值
-  }
-}
-
-onMounted(() => {
-  fetchStats()
+const statsLoading = ref(true)
+const checkingAll = ref(false)
+const stats = reactive({
+  email_count: 0,
+  total_mails: 0,
+  success_rate: 0,
+  status: 'online'
 })
 
-// 功能卡片
-const features = ref([
-  {
-    icon: 'Message',
-    title: '邮箱管理',
-    description: '添加、管理和监控您的邮箱账户',
-    colorClass: 'feature-icon-primary',
-    route: '/emails'
-  },
-  {
-    icon: 'Search',
-    title: '邮件搜索',
-    description: '快速搜索和过滤邮件内容',
-    colorClass: 'feature-icon-success',
-    route: '/search'
-  },
-  {
-    icon: 'User',
-    title: '用户管理',
-    description: '管理系统用户和权限设置',
-    colorClass: 'feature-icon-warning',
-    route: '/admin/users'
-  },
-  {
-    icon: 'Setting',
-    title: '系统设置',
-    description: '配置系统参数和个人偏好',
-    colorClass: 'feature-icon-info',
-    route: '/account'
-  }
-])
+const greetingSubtitle = computed(() => {
+  const hour = new Date().getHours()
+  let greet = '晚上好'
+  if (hour < 6) greet = '夜深了'
+  else if (hour < 12) greet = '早上好'
+  else if (hour < 14) greet = '中午好'
+  else if (hour < 18) greet = '下午好'
+  return `${greet}，${auth.currentUser?.username || '用户'}`
+})
 
-// 快速操作
-const quickActions = ref([
-  {
-    icon: 'Plus',
-    text: '添加邮箱',
-    colorClass: 'quick-action-primary',
-    action: 'addEmail'
-  },
-  {
-    icon: 'Refresh',
-    text: '刷新邮件',
-    colorClass: 'quick-action-success',
-    action: 'refreshEmails'
-  },
-  {
-    icon: 'Download',
-    text: '导出数据',
-    colorClass: 'quick-action-warning',
-    action: 'exportData'
-  },
-  {
-    icon: 'Setting',
-    text: '系统设置',
-    colorClass: 'quick-action-info',
-    action: 'settings'
-  }
-])
+const wsPill = computed(() => {
+  if (ws.status === 'connected') return { tone: 'success', label: 'WS 实时已连接' }
+  if (ws.status === 'connecting') return { tone: 'info', label: 'WS 连接中…' }
+  return { tone: 'danger', label: 'WS 未连接' }
+})
 
-// 导航方法
-const navigateToEmails = () => {
-  router.push('/emails')
-}
-
-const navigateToSearch = () => {
-  router.push('/search')
-}
-
-const handleFeatureClick = (feature) => {
-  router.push(feature.route)
-}
-
-const handleQuickAction = (action) => {
-  switch (action.action) {
-    case 'addEmail':
-      router.push('/emails')
-      break
-    case 'refreshEmails':
-      router.push('/emails')
-      break
-    case 'exportData':
-      router.push('/emails')
-      break
-    case 'settings':
-      router.push('/account')
-      break
+async function handleCheckAll() {
+  try {
+    await ElMessageBox.confirm('确定要对当前全部邮箱执行一次收信任务吗？', '收取全部邮件', {
+      type: 'info',
+      confirmButtonText: '开始收取'
+    })
+    checkingAll.value = true
+    await emails.ensureEmailsLoaded()
+    const ids = emails.emails.map((e) => e.id)
+    if (ids.length === 0) {
+      ElMessage.warning('当前没有可检查的邮箱')
+      return
+    }
+    await emails.checkEmails(ids)
+    ElMessage.success(`已提交 ${ids.length} 个邮箱进入后台收信队列`)
+  } catch (err) {
+    if (err !== 'cancel') {
+      ElMessage.error(err?.response?.data?.error || '提交收信任务失败')
+    }
+  } finally {
+    checkingAll.value = false
   }
 }
+
+const quickActions = computed(() => {
+  const list = [
+    {
+      key: 'add',
+      title: '添加邮箱',
+      desc: '支持 Device Code、单条录入与批量导入',
+      icon: Plus,
+      handler: () => router.push('/emails?action=add')
+    },
+    {
+      key: 'check-all',
+      title: '收取全部邮件',
+      desc: '对当前账户下所有邮箱触发一次全量同步',
+      icon: RefreshRight,
+      handler: handleCheckAll
+    },
+    {
+      key: 'export',
+      title: '导出数据',
+      desc: '按标准四段格式导出邮箱凭据 TXT 文件',
+      icon: Download,
+      handler: () => router.push('/emails?action=export')
+    },
+    {
+      key: 'account',
+      title: '账户设置',
+      desc: '修改登录密码、主题偏好与邮件纸张模式',
+      icon: User,
+      handler: () => router.push('/account')
+    }
+  ]
+
+  if (auth.isAdmin) {
+    list.push(
+      {
+        key: 'admin-users',
+        title: '用户管理',
+        desc: '创建用户、重置密码与维护管理员权限',
+        icon: User,
+        handler: () => router.push('/admin/users')
+      },
+      {
+        key: 'admin-system',
+        title: '系统设置',
+        desc: '注册开关、实时收信调度与服务健康检查',
+        icon: Setting,
+        handler: () => router.push('/admin/system')
+      }
+    )
+  }
+  return list
+})
+
+async function loadDashboard({ silent = false } = {}) {
+  if (!silent) statsLoading.value = true
+  try {
+    const [statsRes] = await Promise.all([api.getStats(), emails.fetchTokenStatus()])
+    const d = statsRes?.data || {}
+    stats.email_count = Number(d.email_count) || 0
+    stats.total_mails = Number(d.total_mails) || 0
+    stats.success_rate = Number(d.success_rate) || 0
+    stats.status = d.status || 'online'
+  } catch (err) {
+    if (!silent) console.warn('加载仪表盘统计失败:', err?.message)
+  } finally {
+    statsLoading.value = false
+  }
+}
+
+usePolling(() => loadDashboard({ silent: true }), 60000)
+
+onMounted(() => {
+  loadDashboard()
+})
 </script>
 
 <style scoped>
-.dashboard-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 1.5rem;
+.fm-home-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--fm-space-4);
+  margin-bottom: var(--fm-space-5);
+}
+
+.fm-home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: var(--fm-space-5);
+  align-items: start;
+}
+
+.fm-quick-card {
+  padding: var(--fm-space-5);
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: var(--fm-space-4);
 }
 
-/* 欢迎区域 — 扁平卡其，无动画 */
-.welcome-section {
-  margin-bottom: 0.5rem;
-}
-
-.welcome-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 1.5rem 1.75rem;
-  color: var(--text-color);
-  position: relative;
-  overflow: hidden;
-  box-shadow: none;
-}
-
-.welcome-content {
+.fm-card-head {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
-  position: relative;
-  z-index: 2;
-  gap: 1rem;
+  gap: var(--fm-space-3);
 }
 
-.welcome-text {
-  flex: 1;
-}
-
-.welcome-title {
-  font-size: 1.5rem;
-  font-weight: 500;
-  margin: 0 0 0.35rem 0;
-  color: var(--neutral-900);
-  letter-spacing: -0.02em;
-}
-
-.welcome-subtitle {
-  font-size: 0.9rem;
+.fm-card-title {
   margin: 0;
-  color: var(--neutral-500);
+  font-size: var(--fm-fs-md);
+  font-weight: 600;
+  color: var(--fm-text);
 }
 
-.welcome-actions {
+.fm-card-sub {
+  margin: 2px 0 0;
+  font-size: var(--fm-fs-xs);
+  color: var(--fm-text-3);
+}
+
+.fm-quick-list {
   display: flex;
-  gap: 0.5rem;
-  flex-shrink: 0;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.action-btn {
-  border-radius: 8px;
-  font-weight: 500;
-  border: 1px solid var(--border-color);
-}
-
-.primary-action {
-  background: var(--primary-color) !important;
-  color: #fff !important;
-  border-color: var(--primary-color) !important;
-}
-
-.primary-action:hover {
-  background: var(--primary-light) !important;
-  border-color: var(--primary-light) !important;
-}
-
-.secondary-action {
-  background: var(--card-bg) !important;
-  color: var(--neutral-700) !important;
-  border: 1px solid var(--border-color) !important;
-}
-
-.secondary-action:hover {
-  background: var(--neutral-50) !important;
-}
-
-.welcome-decoration,
-.decoration-circle {
-  display: none;
-}
-
-/* 统计区域 — 统一浅卡其图标 */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 0.75rem;
-}
-
-.stat-card {
-  background: var(--card-bg);
-  border-radius: 10px;
-  padding: 1rem 1.15rem;
+.fm-quick-btn {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  box-shadow: none;
-  border: 1px solid var(--border-color);
-  transition: border-color 0.15s ease;
-}
-
-.stat-card:hover {
-  border-color: var(--primary-muted);
-}
-
-.stat-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--primary-dark);
-  background: var(--primary-soft);
-  flex-shrink: 0;
-}
-
-.stat-icon-primary,
-.stat-icon-success,
-.stat-icon-warning,
-.stat-icon-info {
-  background: var(--primary-soft);
-  color: var(--primary-dark);
-}
-
-.stat-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.stat-number {
-  font-size: 1.35rem;
-  font-weight: 500;
-  color: var(--neutral-900);
-  margin-bottom: 0.1rem;
-  letter-spacing: -0.02em;
-}
-
-.stat-label {
-  font-size: 0.8rem;
-  color: var(--neutral-500);
-  font-weight: 500;
-}
-
-.section-title {
-  font-size: 1.05rem;
-  font-weight: 500;
-  color: var(--neutral-800);
-  margin: 0 0 0.85rem 0;
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 0.75rem;
-}
-
-.feature-card {
-  background: var(--card-bg);
-  border-radius: 10px;
-  padding: 1rem 1.15rem;
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  box-shadow: none;
-  border: 1px solid var(--border-color);
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--fm-border);
+  border-radius: var(--fm-radius-md);
+  background: var(--fm-surface-2);
+  color: var(--fm-text);
   cursor: pointer;
+  text-align: left;
+  transition: background var(--fm-dur-fast) var(--fm-ease), border-color var(--fm-dur-fast) var(--fm-ease);
 }
 
-.feature-card:hover {
-  border-color: var(--primary-muted);
-  background: var(--neutral-50);
+.fm-quick-btn:hover:not(:disabled) {
+  background: var(--fm-surface-hover);
+  border-color: var(--fm-border-strong);
 }
 
-.feature-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--primary-dark);
-  background: var(--primary-soft);
-  flex-shrink: 0;
-}
-
-.feature-icon-primary,
-.feature-icon-success,
-.feature-icon-warning,
-.feature-icon-info {
-  background: var(--primary-soft);
-  color: var(--primary-dark);
-}
-
-.feature-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.feature-title {
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: var(--neutral-900);
-  margin: 0 0 0.2rem 0;
-}
-
-.feature-description {
-  font-size: 0.8rem;
-  color: var(--neutral-500);
-  margin: 0;
-  line-height: 1.45;
-}
-
-.feature-arrow {
-  color: var(--neutral-400);
-}
-
-.feature-card:hover .feature-arrow {
-  color: var(--primary-dark);
-}
-
-.quick-actions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 0.65rem;
-}
-
-.quick-action-card {
-  background: var(--card-bg);
-  border-radius: 10px;
-  padding: 0.9rem 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  box-shadow: none;
-  border: 1px solid var(--border-color);
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-  cursor: pointer;
-}
-
-.quick-action-card:hover {
-  border-color: var(--primary-muted);
-  background: var(--neutral-50);
-}
-
-.quick-action-icon {
+.fm-quick-btn__icon {
   width: 32px;
   height: 32px;
-  border-radius: 7px;
-  display: flex;
+  border-radius: var(--fm-radius-sm);
+  background: var(--fm-primary-soft);
+  color: var(--fm-text);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary-dark);
-  background: var(--primary-soft);
   flex-shrink: 0;
 }
 
-.quick-action-primary,
-.quick-action-success,
-.quick-action-warning,
-.quick-action-info {
-  background: var(--primary-soft);
-  color: var(--primary-dark);
+.fm-quick-btn__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-.quick-action-text {
-  font-size: 0.85rem;
+.fm-quick-btn__title {
+  font-size: var(--fm-fs-sm);
   font-weight: 500;
-  color: var(--neutral-700);
+  color: var(--fm-text);
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .dashboard-container {
-    padding: 1rem;
-    gap: 1.5rem;
+.fm-quick-btn__desc {
+  font-size: var(--fm-fs-xs);
+  color: var(--fm-text-3);
+}
+
+.fm-quick-btn__arrow {
+  color: var(--fm-text-3);
+  flex-shrink: 0;
+}
+
+@media (max-width: 1199.98px) {
+  .fm-home-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .welcome-card {
-    padding: 1.5rem;
-  }
-
-  .welcome-content {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1.5rem;
-  }
-
-  .welcome-title {
-    font-size: 2rem;
-  }
-
-  .welcome-subtitle {
-    font-size: 1rem;
-  }
-
-  .welcome-actions {
-    width: 100%;
-    flex-direction: column;
-  }
-
-  .action-btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-  }
-
-  .stat-card {
-    padding: 1rem;
-  }
-
-  .features-grid {
+  .fm-home-grid {
     grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-
-  .feature-card {
-    padding: 1rem;
-  }
-
-  .quick-actions-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-  }
-
-  .quick-action-card {
-    padding: 1rem;
-    flex-direction: column;
-    text-align: center;
-    gap: 0.5rem;
   }
 }
 
-@media (max-width: 480px) {
-  .welcome-title {
-    font-size: 1.75rem;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .quick-actions-grid {
+@media (max-width: 767.98px) {
+  .fm-home-stats {
     grid-template-columns: 1fr;
   }
 }

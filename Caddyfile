@@ -1,41 +1,43 @@
 {
-        log {
-                output file /var/log/caddy/error.log {
-                        level ERROR
-                }
-                output file /var/log/caddy/access.log {
-                        level INFO
-                }
-        }
+	log {
+		output file /var/log/caddy/error.log {
+			level ERROR
+		}
+		output file /var/log/caddy/access.log {
+			level INFO
+		}
+	}
+	servers {
+		trusted_proxies static private_ranges
+	}
 }
 
 :80 {
-        # WebSocket 转发  
-        handle /ws {
-                reverse_proxy http://127.0.0.1:8765
-        }
+	encode zstd gzip
 
-        # API 请求转发  
-        handle /api/* {
-                reverse_proxy http://127.0.0.1:5000
-        }
+	# WebSocket 转发
+	handle /ws {
+		reverse_proxy http://127.0.0.1:8765
+	}
 
-        # 静态文件服务  
-        handle {
-                root * /app/frontend/dist
-                try_files {path} /index.html
-                file_server
-        }
-        encode gzip {
-                match {
-                        header Content-Type text/plain
-                        header Content-Type text/css
-                        header Content-Type application/json
-                        header Content-Type application/javascript
-                        header Content-Type text/xml
-                        header Content-Type application/xml
-                        header Content-Type application/xml+rss
-                        header Content-Type text/javascript
-                }
-        }
+	# API 请求转发
+	handle /api/* {
+		reverse_proxy http://127.0.0.1:5000
+	}
+
+	# 带哈希静态资源：强缓存 1 年，缺失文件严格返回 404（严禁回退 index.html 污染浏览器/CDN 缓存）
+	handle /assets/* {
+		root * /app/frontend/dist
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# SPA 壳与前端路由：禁止浏览器与 Cloudflare 缓存旧版 index.html / env-config.js
+	handle {
+		root * /app/frontend/dist
+		@no_cache not path /favicon.svg *.ico *.png *.woff2
+		header @no_cache Cache-Control "no-cache, no-store, must-revalidate"
+		try_files {path} /index.html
+		file_server
+	}
 }

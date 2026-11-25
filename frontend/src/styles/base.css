@@ -1,0 +1,144 @@
+/* ==========================================================================
+   FireMail Base Reset, Typography & Utility Classes
+   ========================================================================== */
+
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url("@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background-color: var(--fm-bg);
+  color: var(--fm-text);
+  font-family: var(--fm-font-sans);
+  font-size: var(--fm-fs-sm);
+  line-height: var(--fm-lh-base);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  min-height: 100%;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: var(--fm-lh-tight);
+  color: var(--fm-text);
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--fm-accent);
+  text-decoration: none;
+  transition: color var(--fm-dur-fast) var(--fm-ease);
+}
+
+a:hover {
+  color: var(--fm-accent-hover);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--fm-focus-ring);
+}
+
+/* Tabular monospace data typography */
+.fm-mono {
+  font-family: var(--fm-font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Reusable surface card */
+.fm-card {
+  background: var(--fm-surface);
+  border: 1px solid var(--fm-border);
+  border-radius: var(--fm-radius-lg);
+  box-shadow: var(--fm-shadow-xs);
+}
+
+.fm-surface-subtle {
+  background: var(--fm-bg-subtle);
+  border: 1px solid var(--fm-border);
+  border-radius: var(--fm-radius-md);
+}
+
+.fm-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Page transition */
+.fm-page-enter-active,
+.fm-page-leave-active {
+  transition: opacity var(--fm-dur) var(--fm-ease), transform var(--fm-dur) var(--fm-ease);
+}
+
+.fm-page-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.fm-page-leave-to {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fm-page-enter-active,
+  .fm-page-leave-active {
+    transition: opacity var(--fm-dur-fast) linear;
+  }
+  .fm-page-enter-from {
+    transform: none;
+  }
+}
+
+/* Subtle scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--fm-border-strong);
+  border-radius: var(--fm-radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fm-text-3);
+}

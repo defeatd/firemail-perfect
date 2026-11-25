@@ -1,5 +1,6 @@
 import os
 import sys
+import atexit
 import logging
 import threading
 import argparse
@@ -8,13 +9,12 @@ import time
 import traceback
 import jwt
 from functools import wraps
-from flask import Flask, send_from_directory, jsonify, request, Response, make_response
+from flask import Flask, send_from_directory, jsonify, request, make_response
 from flask_cors import CORS
 from database.db import Database
 from utils.email import EmailBatchProcessor
 from ws_server.handler import WebSocketHandler
 from jwt_config import get_jwt_secret
-import asyncio
 import concurrent.futures
 
 # 配置日志
@@ -34,9 +34,48 @@ os.makedirs(data_dir, exist_ok=True)
 
 # 初始化Flask应用
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024
 
-# 安全修复：CORS 配置从环境变量读取允许的域
-ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5000,http://127.0.0.1').split(',')
+
+@app.errorhandler(413)
+def handle_request_entity_too_large(_err):
+    return jsonify({'error': '请求体超过 32MB，请分批导入'}), 413
+
+# 安全修复：CORS 配置从环境变量读取允许的域（归一化去首尾空格与尾斜杠）
+def _normalize_origin(origin: str) -> str:
+    return (origin or '').strip().rstrip('/')
+
+
+def _parse_allowed_origins(raw: str):
+    return [
+        _normalize_origin(o)
+        for o in (raw or '').split(',')
+        if _normalize_origin(o)
+    ]
+
+
+ALLOWED_ORIGINS = _parse_allowed_origins(
+    os.environ.get('ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5000,http://127.0.0.1')
+)
+
+
+def _is_origin_allowed(origin: str) -> bool:
+    norm = _normalize_origin(origin)
+    if not norm:
+        return False
+    return '*' in ALLOWED_ORIGINS or norm in ALLOWED_ORIGINS
+
+
+def _is_https_request() -> bool:
+    if request.is_secure:
+        return True
+    xf_proto = request.headers.get('X-Forwarded-Proto', '').split(',')[0].strip().lower()
+    if xf_proto == 'https':
+        return True
+    cf_visitor = request.headers.get('CF-Visitor', '').lower()
+    return '"scheme":"https"' in cf_visitor.replace(' ', '')
+
+
 CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": ALLOWED_ORIGINS}})
 
 # 增加捕获所有OPTIONS请求的处理方法，支持预检请求
@@ -46,7 +85,7 @@ def handle_options(path):
     """处理所有OPTIONS请求"""
     response = make_response()
     origin = request.headers.get('Origin', '')
-    if origin in ALLOWED_ORIGINS or '*' in ALLOWED_ORIGINS:
+    if _is_origin_allowed(origin):
         response.headers.add('Access-Control-Allow-Origin', origin)
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
@@ -56,13 +95,23 @@ def handle_options(path):
 # 安全修复：添加安全响应头
 @app.after_request
 def add_security_headers(response):
-    """为所有响应添加安全头"""
+    """为所有响应添加安全头并兜底 /api/* CORS 响应头"""
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     if os.environ.get('FLASK_ENV') == 'production':
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+
+    if request.path.startswith('/api/'):
+        origin = request.headers.get('Origin', '')
+        if _is_origin_allowed(origin) and 'Access-Control-Allow-Origin' not in response.headers:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            response.headers.add('Vary', 'Origin')
+            if request.method == 'OPTIONS':
+                response.headers.setdefault('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+                response.headers.setdefault('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
     return response
 
 # JWT密钥 - 与 WebSocket 共享同一密钥（见 jwt_config）
@@ -73,9 +122,11 @@ logger.info("系统启动中...")
 
 
 def serialize_email_for_api(email_row, include_secrets=False):
-    """序列化邮箱记录；默认脱敏 password / refresh_token / access_token。"""
+    """序列化邮箱记录；默认脱敏 password / refresh_token / access_token，并附带通道与错误建议。"""
     if not email_row:
         return None
+    from utils.email.token_service import channel_for_scope, hint_for
+
     data = dict(email_row)
     if not include_secrets:
         if 'password' in data and data.get('password'):
@@ -86,6 +137,14 @@ def serialize_email_for_api(email_row, include_secrets=False):
         # access_token 短期凭证不应下发前端
         if 'access_token' in data:
             data['access_token'] = None
+
+    if data.get('mail_type') == 'outlook' and data.get('oauth_scope') is not None:
+        data['mail_channel'] = channel_for_scope(data.get('oauth_scope'))
+    else:
+        data['mail_channel'] = None
+
+    err_code = data.get('last_refresh_error_code')
+    data['last_refresh_error_hint'] = hint_for(err_code) if err_code else ''
     return data
 
 
@@ -201,19 +260,20 @@ def login():
         # 创建JSON响应并设置CORS头
         response = make_response(jsonify(response_data))
         origin = request.headers.get('Origin', '')
-        if origin in ALLOWED_ORIGINS:
+        if _is_origin_allowed(origin):
             response.headers.add('Access-Control-Allow-Origin', origin)
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
         response.headers.add('Access-Control-Allow-Methods', 'POST')
 
-        # 安全修复：根据环境设置 Cookie 安全标志
+        # 安全修复：生产环境仅在实际 HTTPS（含反代 X-Forwarded-Proto / Cloudflare CF-Visitor）请求下启用 Secure Cookie，
+        # 避免本机 HTTP 回环访问被浏览器拒收 Cookie
         is_production = os.environ.get('FLASK_ENV') == 'production'
         response.set_cookie(
             'token',
             token,
             httponly=True,
             max_age=token_max_age_seconds,
-            secure=is_production,  # 生产环境自动启用 HTTPS
+            secure=(is_production and _is_https_request()),
             samesite='Lax'
         )
 
@@ -510,7 +570,9 @@ def add_email(current_user):
         # 入库前校验 OAuth，避免无效账号静默进入列表
         try:
             from utils.email.outlook import OutlookMailHandler
-            token_result = OutlookMailHandler.refresh_access_token(refresh_token, client_id)
+            token_result = OutlookMailHandler.refresh_access_token(
+                refresh_token, client_id, email=email
+            )
             if not token_result.get('success'):
                 err = token_result.get('error') or token_result.get('error_code') or '未知错误'
                 need = token_result.get('need_reauth')
@@ -540,6 +602,8 @@ def add_email(current_user):
                     access_token,
                     refresh_token=refresh_token,
                     expires_in=token_result.get('expires_in'),
+                    rotated=bool(token_result.get('rotated')),
+                    oauth_scope=token_result.get('scope_used'),
                 )
             except Exception as e:
                 logger.warning(f"保存初始 access_token 失败: {e}")
@@ -904,17 +968,30 @@ def upload_email_file(current_user, email_id):
         traceback.print_exc()
         return jsonify({'error': f'服务器错误: {str(e)}'}), 500
 
+def _get_import_registry():
+    from utils.email.import_jobs import get_import_job_registry
+
+    reg = get_import_job_registry(db)
+    reg.set_notifier(ws_handler.push_to_user)
+    return reg
+
+
 @app.route('/api/emails/import', methods=['POST'])
 @token_required
 def import_emails(current_user):
-    """批量导入邮箱（Outlook 会先校验 token，无效账号不入库并返回失败详情）"""
-    payload = request.json or {}
+    """批量导入邮箱（先解析入库毫秒返回，后台限速首验并回写状态）"""
+    payload = request.get_json(silent=True) or {}
     data = payload.get('data')
     mail_type = payload.get('mail_type', 'outlook')
-    # 默认开启校验；显式传 validate=false 可跳过（不推荐）
-    validate = payload.get('validate', True)
-    if isinstance(validate, str):
-        validate = validate.lower() not in ('0', 'false', 'no')
+    separator = payload.get('separator', 'auto')
+    on_duplicate = payload.get('on_duplicate', 'skip')
+    raw_verify = payload.get('verify')
+    if raw_verify is None:
+        raw_verify = payload.get('validate', True)
+    if isinstance(raw_verify, str):
+        verify = raw_verify.lower() not in ('0', 'false', 'no')
+    else:
+        verify = bool(raw_verify)
 
     if not data or not str(data).strip():
         return jsonify({'error': '导入数据不能为空'}), 400
@@ -926,17 +1003,59 @@ def import_emails(current_user):
             current_user['id'],
             str(data),
             mail_type=mail_type,
-            validate_credentials=bool(validate),
+            validate_credentials=verify,
+            separator=separator,
+            on_duplicate=on_duplicate,
+            registry=_get_import_registry(),
         )
+        if result.get('over_limit'):
+            return jsonify({'error': result.get('error') or '单次导入超过上限'}), 413
+
         logger.info(
-            f"用户 {current_user['username']} 批量导入: "
-            f"成功={result['success']} 失败={result['failed']}"
+            f"用户 {current_user['username']} 批量入库: "
+            f"新增={result['added']} 更新={result['updated']} "
+            f"跳过={result['skipped']} 无效={result['invalid']} 冲突={result['warned']} "
+            f"job_id={result.get('job_id')}"
         )
-        # 有失败时用 200 仍返回完整结果，由前端展示；全失败也可 200
         return jsonify(result)
     except Exception as e:
         logger.error(f"批量导入失败: {str(e)}")
         return jsonify({'error': f'导入失败: {str(e)}'}), 500
+
+
+@app.route('/api/import_jobs/<job_id>', methods=['GET'])
+@token_required
+def get_import_job(current_user, job_id):
+    """查询批量导入后台首验任务进度（仅所有者或管理员可查，否则 404）"""
+    registry = _get_import_registry()
+    job = registry.get(
+        job_id,
+        user_id=current_user['id'],
+        is_admin=bool(current_user['is_admin']),
+    )
+    if job is None:
+        return jsonify({'error': '首验任务不存在或无权查看'}), 404
+    return jsonify(registry.snapshot(job))
+
+
+@app.route('/api/import_jobs/<job_id>/cancel', methods=['POST'])
+@token_required
+def cancel_import_job(current_user, job_id):
+    """取消未完成的首验任务（未开始账号保持 pending，由 TokenKeeper 兜底）"""
+    registry = _get_import_registry()
+    job = registry.get(
+        job_id,
+        user_id=current_user['id'],
+        is_admin=bool(current_user['is_admin']),
+    )
+    if job is None:
+        return jsonify({'error': '首验任务不存在或无权操作'}), 404
+    cancelled = registry.cancel(
+        job_id,
+        user_id=current_user['id'],
+        is_admin=bool(current_user['is_admin']),
+    )
+    return jsonify({'cancelled': cancelled})
 
 # 系统配置管理
 @app.route('/api/admin/config/registration', methods=['POST'])
@@ -1237,21 +1356,96 @@ def refresh_outlook_email_token(current_user, email_id):
                 'success': True,
                 'message': 'Token 已自动刷新并保存',
                 'expires_in': result.get('expires_in'),
-                'refresh_rotated': bool(
-                    result.get('refresh_token')
-                    and result.get('refresh_token') != email_info.get('refresh_token')
-                ),
+                'refresh_rotated': bool(result.get('rotated')),
+                'refresh_token_expires_at': result.get('refresh_token_expires_at'),
+                'next_rotate_at': result.get('next_rotate_at'),
+                'tier': result.get('tier'),
+                'error_kind': None,
             })
-        status = 401 if result.get('need_reauth') else 500
+        status = 401 if result.get('need_reauth') else 502
         return jsonify({
             'success': False,
             'message': result.get('error') or '刷新失败',
             'error_code': result.get('error_code'),
+            'error_kind': result.get('error_kind'),
             'need_reauth': bool(result.get('need_reauth')),
+            'refresh_token_expires_at': result.get('refresh_token_expires_at'),
+            'next_rotate_at': result.get('next_rotate_at'),
+            'tier': result.get('tier'),
         }), status
     except Exception as e:
         logger.error(f"手动刷新 Outlook token 失败: {str(e)}")
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/emails/batch_refresh_token', methods=['POST'])
+@token_required
+def batch_refresh_outlook_tokens(current_user):
+    """批量异步保活指定 Outlook 邮箱的 refresh_token（非管理员按属主过滤，上限 1000）"""
+    try:
+        body = request.get_json(silent=True) or {}
+        raw_ids = body.get('email_ids')
+        if not isinstance(raw_ids, list) or not raw_ids:
+            return jsonify({'error': '请提供非空的 email_ids 列表'}), 400
+
+        normalized_ids = []
+        seen = set()
+        for item in raw_ids:
+            try:
+                eid = int(item)
+            except (TypeError, ValueError):
+                continue
+            if eid > 0 and eid not in seen:
+                seen.add(eid)
+                normalized_ids.append(eid)
+
+        if not normalized_ids:
+            return jsonify({'error': '没有有效的邮箱 ID'}), 400
+        if len(normalized_ids) > 1000:
+            return jsonify({'error': '单次批量保活最多支持 1000 个邮箱'}), 400
+
+        if current_user['is_admin']:
+            rows = db.get_emails_by_ids(normalized_ids)
+            allowed_ids = {
+                row['id'] for row in rows if row.get('mail_type') == 'outlook'
+            }
+        else:
+            owned_rows = db.get_all_emails(current_user['id'])
+            allowed_ids = {
+                row['id']
+                for row in owned_rows
+                if row['mail_type'] == 'outlook'
+            }
+
+        valid_ids = [eid for eid in normalized_ids if eid in allowed_ids]
+        include_invalid = bool(body.get('include_invalid', False))
+        queued = (
+            email_processor.batch_refresh_outlook_tokens(
+                valid_ids, include_invalid=include_invalid
+            )
+            if valid_ids
+            else 0
+        )
+        return jsonify({'success': True, 'queued': queued})
+    except Exception as e:
+        logger.error(f"批量刷新 Outlook token 失败: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/token_keeper/status', methods=['GET'])
+@token_required
+def get_token_keeper_status(current_user):
+    """获取 Outlook Token 保活调度器状态及当前可见邮箱的令牌健康度统计"""
+    try:
+        user_id = None if current_user['is_admin'] else current_user['id']
+        now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+        return jsonify({
+            'keeper': email_processor.token_keeper.status(),
+            'health': db.get_token_health(now, user_id=user_id),
+        })
+    except Exception as e:
+        logger.error(f"获取 Token Keeper 状态失败: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/emails/<int:email_id>/oauth/device/start', methods=['POST'])
@@ -1406,6 +1600,77 @@ def start_websocket_server():
         logger.error(f"WebSocket服务器异常: {e}")
         sys.exit(1)
 
+def _is_test_runtime() -> bool:
+    if app.config.get('TESTING'):
+        return True
+    if os.environ.get('PYTEST_CURRENT_TEST'):
+        return True
+    if os.environ.get('FIREMAIL_TESTING', '').strip().lower() in ('1', 'true', 'yes'):
+        return True
+    if 'pytest' in sys.modules or '_pytest' in sys.modules:
+        return True
+    return False
+
+
+def _is_reloader_parent(debug: bool = False) -> bool:
+    """Werkzeug reloader 父监控进程未设置 WERKZEUG_RUN_MAIN='true'，不应拉起后台保活线程。"""
+    if debug and os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+        return True
+    flask_debug = os.environ.get('FLASK_DEBUG', '').strip().lower()
+    if flask_debug in ('1', 'true', 'yes') and os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+        return True
+    return False
+
+
+def _is_token_keeper_enabled() -> bool:
+    raw = os.environ.get('OUTLOOK_TOKEN_KEEPER_ENABLED', 'true').strip().lower()
+    return raw not in ('0', 'false', 'no', 'off')
+
+
+def start_token_keeper_if_enabled(*, debug: bool = False) -> bool:
+    """
+    在非测试、非 Werkzeug reloader 父进程且开关开启时，独立启动 OutlookTokenKeeper。
+    多进程下由 fcntl 文件锁保证全局仅一个实例真正运行。
+    """
+    if _is_test_runtime():
+        return False
+    if not _is_token_keeper_enabled():
+        logger.info("Outlook Token 自动保活已通过 OUTLOOK_TOKEN_KEEPER_ENABLED 禁用")
+        return False
+    if _is_reloader_parent(debug=debug):
+        logger.info("检测到 Werkzeug reloader 父进程，跳过启动 OutlookTokenKeeper（交由子进程启动）")
+        return False
+    return email_processor.start_token_keeper()
+
+
+def _is_wsgi_server_runtime() -> bool:
+    wsgi_modules = ('gunicorn', 'uwsgi', 'waitress', 'flask.cli', 'werkzeug.serving')
+    if any(mod in sys.modules for mod in wsgi_modules):
+        return True
+    if os.environ.get('SERVER_SOFTWARE'):
+        return True
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        return True
+    return False
+
+
+def _shutdown_import_jobs():
+    try:
+        from utils.email import import_jobs as _ij_mod
+        reg = _ij_mod._registry_singleton
+        if reg is not None:
+            reg.shutdown()
+    except Exception:
+        pass
+
+
+atexit.register(email_processor.stop_token_keeper)
+atexit.register(_shutdown_import_jobs)
+
+if __name__ != '__main__' and _is_wsgi_server_runtime():
+    start_token_keeper_if_enabled(debug=False)
+
+
 if __name__ == '__main__':
     try:
         args = parse_args()
@@ -1413,14 +1678,20 @@ if __name__ == '__main__':
         # 设置WebSocket端口
         ws_handler.port = args.ws_port
 
-        # 启动WebSocket服务器
-        ws_thread = threading.Thread(target=start_websocket_server)
-        ws_thread.daemon = True
-        ws_thread.start()
+        # 在 debug 模式下，仅在 reloader 子进程（WERKZEUG_RUN_MAIN='true'）中启动后台线程
+        if not _is_reloader_parent(debug=args.debug):
+            # 启动WebSocket服务器
+            ws_thread = threading.Thread(target=start_websocket_server)
+            ws_thread.daemon = True
+            ws_thread.start()
 
-        # 启动实时邮件检查 + Outlook Token 自动续期
-        email_processor.start_real_time_check(check_interval=60)
-        logger.info("实时邮件检查与 Outlook Token 自动续期已启动")
+            # 启动实时邮件检查（独立于 Token 保活器）
+            email_processor.start_real_time_check(check_interval=60)
+            logger.info("实时邮件检查已启动")
+
+            # 独立启动 Outlook Token 主动保活调度器（不受实时收信开关影响）
+            if start_token_keeper_if_enabled(debug=args.debug):
+                logger.info("Outlook Token 主动保活调度器已独立启动")
 
         # 启动Flask应用
         logger.info(f"花火邮箱助手启动于 http://{args.host}:{args.port}")
@@ -1431,6 +1702,10 @@ if __name__ == '__main__':
         logger.error(f"程序启动异常: {e}")
     finally:
         # 清理资源
+        try:
+            email_processor.stop_token_keeper()
+        except Exception:
+            pass
         if db:
             db.close()
         logger.info("程序已关闭")

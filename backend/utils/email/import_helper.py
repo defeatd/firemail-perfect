@@ -1,63 +1,31 @@
 """
-批量导入邮箱的公共逻辑。
+批量导入邮箱的公共逻辑（解耦入库与微软首验）。
 
-对 Outlook 会在入库前校验 refresh_token 是否可用；
-无效账号不会写入数据库，并返回可读的失败原因。
+流程：
+1. 使用 import_parser.parse_import_text 纯内存解析、校验与去重（0 次外网请求）
+2. 超出 5000 行上限返回 over_limit=True（由 HTTP 层映射为 413）
+3. 单事务批量写入数据库（auth_status='pending'），保留全部有效行
+4. 若 verify=True 且有新增/更新行，提交后台限速首验任务（ImportJobRegistry）并返回 job_id
+5. 绝不在返回值或日志中泄露密码、Refresh Token 或未脱敏原始行
 """
 
 from __future__ import annotations
 
-import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
+from .import_jobs import ImportJobRegistry, get_import_job_registry
+from .import_parser import MAX_IMPORT_ROWS, parse_import_text
 from .logger import logger
-from .outlook import OutlookMailHandler
+from .token_service import utcnow
 
-_EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
-
-
-def _mask_line(line: str, max_len: int = 80) -> str:
-    """脱敏展示：只保留邮箱前缀，隐藏 token。"""
-    line = (line or "").strip()
-    if not line:
-        return ""
-    parts = line.split("----")
-    if parts:
-        head = parts[0]
-        if len(parts) > 1:
-            return f"{head}----***（已隐藏敏感字段）"
-    if len(line) > max_len:
-        return line[:max_len] + "..."
-    return line
+MAX_RETURNED_ROWS = 1000
 
 
-def _validate_outlook_credentials(
-    email: str,
-    client_id: str,
-    refresh_token: str,
-) -> Tuple[bool, Optional[str], Optional[Dict[str, Any]]]:
-    """
-    校验 Outlook OAuth 凭据。
-
-    返回: (ok, error_message, token_result)
-    """
-    if not client_id or not refresh_token:
-        return False, "缺少 Client ID 或 Refresh Token", None
-
-    result = OutlookMailHandler.refresh_access_token(refresh_token, client_id)
-    if result.get("success") and result.get("access_token"):
-        return True, None, result
-
-    code = result.get("error_code") or "unknown"
-    detail = result.get("error") or "未知错误"
-    if result.get("need_reauth"):
-        reason = (
-            f"OAuth 凭据无效或已过期，需要重新授权"
-            f"（{code}: {detail[:120]}）"
-        )
-    else:
-        reason = f"Token 校验失败（{code}: {detail[:120]}）"
-    return False, reason, result
+def _mask_problem_content(email: str, line_no: int) -> str:
+    """生成不含任何密码与 Token 的脱敏占位串（兼容旧前端/WS failed_details 字段）。"""
+    if email:
+        return f"{email}----***（已隐藏敏感字段）"
+    return f"第 {line_no} 行----***（已隐藏敏感字段）"
 
 
 def import_email_lines(
@@ -66,149 +34,224 @@ def import_email_lines(
     raw_data: str,
     mail_type: str = "outlook",
     validate_credentials: bool = True,
+    *,
+    separator: Optional[str] = "auto",
+    on_duplicate: str = "skip",
+    registry: Optional[ImportJobRegistry] = None,
 ) -> Dict[str, Any]:
     """
-    解析并导入多行邮箱数据。
+    解析并快速入库多行邮箱数据，按需启动后台首验任务。
 
-    返回结构:
-      total, success, failed, skipped_empty,
-      failed_details: [{line, email, content, reason}],
-      success_emails: [email, ...]
+    - validate_credentials 参数兼容旧调用方，映射为后台 verify 开关
+    - 返回同时包含新契约字段与旧前端/WS 兼容字段
     """
-    mail_type = (mail_type or "outlook").lower().strip()
-    lines = (raw_data or "").split("\n")
+    normalized_type = (mail_type or "outlook").lower().strip()
+    strategy = (on_duplicate or "skip").lower().strip()
+    if strategy not in ("skip", "update"):
+        strategy = "skip"
 
-    success_count = 0
-    skipped_empty = 0
-    failed_details: List[Dict[str, Any]] = []
-    success_emails: List[str] = []
-
-    non_empty_total = 0
-
-    for i, raw_line in enumerate(lines):
-        line = raw_line.strip()
-        if not line:
-            skipped_empty += 1
-            continue
-
-        non_empty_total += 1
-        line_no = i + 1
-        display = _mask_line(line)
-
-        try:
-            if mail_type == "outlook":
-                parts = line.split("----")
-                if len(parts) != 4:
-                    failed_details.append({
-                        "line": line_no,
-                        "email": parts[0] if parts else "",
-                        "content": display,
-                        "reason": "格式错误：需要 4 个字段（邮箱----密码----ClientID----RefreshToken）",
-                    })
-                    continue
-
-                email, password, client_id, refresh_token = [p.strip() for p in parts]
-                if not all([email, password, client_id, refresh_token]):
-                    failed_details.append({
-                        "line": line_no,
-                        "email": email or "",
-                        "content": display,
-                        "reason": "有空白字段，四个字段均不能为空",
-                    })
-                    continue
-
-                if not _EMAIL_RE.match(email):
-                    failed_details.append({
-                        "line": line_no,
-                        "email": email,
-                        "content": display,
-                        "reason": "邮箱地址格式不正确",
-                    })
-                    continue
-
-                token_result = None
-                if validate_credentials:
-                    ok, err, token_result = _validate_outlook_credentials(
-                        email, client_id, refresh_token
-                    )
-                    if not ok:
-                        failed_details.append({
-                            "line": line_no,
-                            "email": email,
-                            "content": display,
-                            "reason": err or "凭据校验失败",
-                        })
-                        logger.warning(f"导入跳过无效 Outlook 账号: {email} - {err}")
-                        continue
-
-                # 若校验时 refresh 已轮换，使用最新 refresh 入库
-                final_refresh = refresh_token
-                final_access = None
-                if token_result:
-                    final_refresh = token_result.get("refresh_token") or refresh_token
-                    final_access = token_result.get("access_token")
-
-                email_id = db.add_email(
-                    user_id,
-                    email,
-                    password,
-                    client_id,
-                    final_refresh,
-                    mail_type,
-                )
-                if not email_id:
-                    failed_details.append({
-                        "line": line_no,
-                        "email": email,
-                        "content": display,
-                        "reason": "邮箱已存在或写入失败",
-                    })
-                    continue
-
-                # 落库 access_token / 过期时间 / 认证状态
-                if final_access and hasattr(db, "update_email_token"):
-                    try:
-                        db.update_email_token(
-                            email_id,
-                            final_access,
-                            refresh_token=final_refresh,
-                            expires_in=(token_result or {}).get("expires_in"),
-                        )
-                    except Exception as e:
-                        logger.warning(f"写入初始 token 失败 (仍已导入): {email}: {e}")
-
-                success_count += 1
-                success_emails.append(email)
-                logger.info(f"导入成功: {email} (ID={email_id})")
-
-            else:
-                # 其它类型：暂按 IMAP 风格扩展位，当前仅提示不支持批量校验
-                failed_details.append({
-                    "line": line_no,
-                    "email": "",
-                    "content": display,
-                    "reason": f"暂不支持批量导入类型: {mail_type}",
-                })
-
-        except Exception as e:
-            logger.error(f"导入第 {line_no} 行异常: {e}")
-            failed_details.append({
+    if normalized_type != "outlook":
+        non_empty = [
+            (idx + 1, line.replace("\ufeff", "").replace("\r", "").strip())
+            for idx, line in enumerate((raw_data or "").split("\n"))
+            if line.replace("\ufeff", "").replace("\r", "").strip()
+        ]
+        all_rows = [
+            {
                 "line": line_no,
                 "email": "",
-                "content": display,
-                "reason": f"导入异常: {str(e)}",
-            })
+                "action": "invalid",
+                "reason": f"暂不支持批量导入类型: {normalized_type}",
+            }
+            for line_no, _ in non_empty
+        ]
+        truncated = len(all_rows) > MAX_RETURNED_ROWS
+        clipped = all_rows[:MAX_RETURNED_ROWS]
+        failed_details = [
+            {
+                "line": r["line"],
+                "email": "",
+                "reason": r["reason"],
+                "content": _mask_problem_content("", r["line"]),
+            }
+            for r in clipped
+        ]
+        return {
+            "job_id": None,
+            "total": len(non_empty),
+            "added": 0,
+            "updated": 0,
+            "skipped": 0,
+            "invalid": len(non_empty),
+            "warned": 0,
+            "rows": clipped,
+            "rows_truncated": truncated,
+            "success": 0,
+            "failed": len(non_empty),
+            "failed_details": failed_details,
+            "success_emails": [],
+            "message": f"暂不支持批量导入类型: {normalized_type}",
+        }
+
+    parsed = parse_import_text(raw_data or "", separator=separator, max_rows=MAX_IMPORT_ROWS)
+    if parsed.over_limit:
+        return {
+            "over_limit": True,
+            "max_rows": MAX_IMPORT_ROWS,
+            "total": parsed.total_non_empty,
+            "error": f"单次导入行数超过上限 {MAX_IMPORT_ROWS} 行（当前 {parsed.total_non_empty} 行），请分批导入",
+        }
+
+    now = utcnow()
+    db_results = (
+        db.bulk_upsert_outlook_accounts(
+            user_id,
+            parsed.rows,
+            on_duplicate=strategy,
+            now=now,
+        )
+        if parsed.rows
+        else []
+    )
+
+    added = 0
+    updated = 0
+    db_skipped_rows: List[Dict[str, Any]] = []
+    verify_ids: List[int] = []
+    success_emails: List[str] = []
+
+    for rec in db_results:
+        action = rec["action"]
+        if action == "added":
+            added += 1
+            if rec.get("email_id"):
+                verify_ids.append(int(rec["email_id"]))
+            if len(success_emails) < MAX_RETURNED_ROWS:
+                success_emails.append(rec["email"])
+        elif action == "updated":
+            updated += 1
+            if rec.get("email_id"):
+                verify_ids.append(int(rec["email_id"]))
+            if len(success_emails) < MAX_RETURNED_ROWS:
+                success_emails.append(rec["email"])
+        else:
+            db_skipped_rows.append(
+                {
+                    "line": rec["line"],
+                    "email": rec["email"],
+                    "action": "skipped",
+                    "reason": rec.get("reason") or "邮箱已存在（跳过）",
+                }
+            )
+
+    # 失败行优先（invalid -> warned -> skipped），上限 1000，绝不回传原始行
+    problem_rows: List[Dict[str, Any]] = []
+    failed_details_all: List[Dict[str, Any]] = []
+
+    for item in parsed.invalid:
+        problem_rows.append(
+            {
+                "line": item.line,
+                "email": item.email,
+                "action": "invalid",
+                "reason": item.error or "格式错误",
+            }
+        )
+        failed_details_all.append(
+            {
+                "line": item.line,
+                "email": item.email,
+                "reason": item.error or "格式错误",
+                "content": _mask_problem_content(item.email, item.line),
+            }
+        )
+
+    for item in parsed.token_conflicts:
+        reason = "不同邮箱共用同一授权码（疑似复制错位），已跳过"
+        problem_rows.append(
+            {
+                "line": item.line,
+                "email": item.email,
+                "action": "warned",
+                "reason": reason,
+            }
+        )
+        failed_details_all.append(
+            {
+                "line": item.line,
+                "email": item.email,
+                "reason": reason,
+                "content": _mask_problem_content(item.email, item.line),
+            }
+        )
+
+    for item in parsed.duplicates_in_batch:
+        problem_rows.append(
+            {
+                "line": item.line,
+                "email": item.email,
+                "action": "skipped",
+                "reason": "批内重复邮箱，已保留最后一条",
+            }
+        )
+
+    problem_rows.extend(db_skipped_rows)
+
+    rows_truncated = len(problem_rows) > MAX_RETURNED_ROWS
+    returned_rows = problem_rows[:MAX_RETURNED_ROWS]
+    returned_failed_details = failed_details_all[:MAX_RETURNED_ROWS]
+
+    invalid_cnt = len(parsed.invalid)
+    warned_cnt = len(parsed.token_conflicts)
+    skipped_cnt = len(parsed.duplicates_in_batch) + len(db_skipped_rows)
+    success_cnt = added + updated
+    failed_cnt = invalid_cnt + warned_cnt
+
+    job_id: Optional[str] = None
+    if validate_credentials and verify_ids:
+        job_reg = registry if registry is not None else get_import_job_registry(db)
+        job = job_reg.start(user_id, verify_ids)
+        if job is not None:
+            job_id = job.id
+
+    if parsed.total_non_empty == 0:
+        msg = "没有有效的导入行"
+    elif success_cnt > 0 and job_id:
+        msg = (
+            f"入库完成：新增 {added}，更新 {updated}，跳过 {skipped_cnt}，"
+            f"无效 {invalid_cnt}，冲突 {warned_cnt}；后台首验已启动"
+        )
+    else:
+        msg = (
+            f"入库完成：新增 {added}，更新 {updated}，跳过 {skipped_cnt}，"
+            f"无效 {invalid_cnt}，冲突 {warned_cnt}"
+        )
+
+    logger.info(
+        "批量入库完成 user_id=%d total=%d added=%d updated=%d skipped=%d invalid=%d warned=%d job_id=%s",
+        user_id,
+        parsed.total_non_empty,
+        added,
+        updated,
+        skipped_cnt,
+        invalid_cnt,
+        warned_cnt,
+        job_id or "-",
+    )
 
     return {
-        "total": non_empty_total,
-        "success": success_count,
-        "failed": len(failed_details),
-        "skipped_empty": skipped_empty,
-        "failed_details": failed_details,
+        "job_id": job_id,
+        "total": parsed.total_non_empty,
+        "added": added,
+        "updated": updated,
+        "skipped": skipped_cnt,
+        "invalid": invalid_cnt,
+        "warned": warned_cnt,
+        "rows": returned_rows,
+        "rows_truncated": rows_truncated,
+        "success": success_cnt,
+        "failed": failed_cnt,
+        "failed_details": returned_failed_details,
         "success_emails": success_emails,
-        "message": (
-            f"导入完成：成功 {success_count} 个，失败 {len(failed_details)} 个"
-            if non_empty_total
-            else "没有有效的导入行"
-        ),
+        "message": msg,
     }

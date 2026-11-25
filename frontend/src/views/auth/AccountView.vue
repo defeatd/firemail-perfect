@@ -1,313 +1,279 @@
 <template>
-  <div class="account-container">
-    <div class="account-header">
-      <h1>账户管理</h1>
-    </div>
-    
-    <div class="account-section">
-      <div class="account-info">
-        <h2>个人信息</h2>
-        <div class="info-row">
-          <span class="info-label">用户名</span>
-          <span class="info-value">{{ currentUser.username }}</span>
+  <div class="fm-account-view">
+    <PageHeader title="账户设置" subtitle="管理个人账户安全与工作台外观偏好" />
+
+    <div class="fm-account-grid">
+      <section class="fm-card fm-account-card">
+        <h2 class="fm-account-card__title">个人信息</h2>
+        <div class="fm-profile-row">
+          <span class="fm-profile-row__label">用户名</span>
+          <span class="fm-profile-row__val fm-mono">{{ username }}</span>
         </div>
-        <div class="info-row">
-          <span class="info-label">账户类型</span>
-          <span class="info-value">{{ currentUser.isAdmin ? '管理员' : '普通用户' }}</span>
+        <div class="fm-profile-row">
+          <span class="fm-profile-row__label">账户类型</span>
+          <StatusPill :tone="auth.isAdmin ? 'accent' : 'muted'">
+            {{ auth.isAdmin ? '管理员' : '普通用户' }}
+          </StatusPill>
         </div>
-        <div class="info-row">
-          <span class="info-label">注册时间</span>
-          <span class="info-value">{{ formatDate(currentUser.created_at) }}</span>
-        </div>
-      </div>
-    </div>
-    
-    <div class="account-section">
-      <h2>修改密码</h2>
-      <div v-if="passwordMessage" :class="['alert', passwordMessage.type === 'success' ? 'alert-success' : 'alert-danger']">
-        {{ passwordMessage.text }}
-      </div>
-      
-      <form @submit.prevent="changePassword" class="password-form">
-        <div class="form-group">
-          <label for="currentPassword">当前密码</label>
-          <input 
-            type="password" 
-            id="currentPassword" 
-            v-model="passwordData.currentPassword" 
-            class="form-control" 
-            placeholder="请输入当前密码" 
-            required
+      </section>
+
+      <section class="fm-card fm-account-card">
+        <h2 class="fm-account-card__title">外观与阅读偏好</h2>
+
+        <div class="fm-pref-row">
+          <div>
+            <div class="fm-pref-row__label">界面主题</div>
+            <div class="fm-pref-row__desc">选择亮色、暗色或跟随系统主题</div>
+          </div>
+          <SegmentedFilter
+            :model-value="ui.theme"
+            :options="THEME_OPTIONS"
+            size="sm"
+            @update:model-value="ui.setTheme($event)"
           />
         </div>
-        
-        <div class="form-group">
-          <label for="newPassword">新密码</label>
-          <input 
-            type="password" 
-            id="newPassword" 
-            v-model="passwordData.newPassword" 
-            class="form-control" 
-            placeholder="请输入新密码" 
-            required
-          />
-          <small class="form-text text-muted">密码长度应至少为6个字符</small>
-        </div>
-        
-        <div class="form-group">
-          <label for="confirmPassword">确认新密码</label>
-          <input 
-            type="password" 
-            id="confirmPassword" 
-            v-model="passwordData.confirmPassword" 
-            class="form-control" 
-            placeholder="请再次输入新密码" 
-            required
+
+        <div class="fm-pref-row">
+          <div>
+            <div class="fm-pref-row__label">邮件纸张模式</div>
+            <div class="fm-pref-row__desc">暗色主题下以白纸黑字阅读 HTML 邮件，避免反色失真</div>
+          </div>
+          <el-switch
+            :model-value="ui.mailPaperMode"
+            @change="ui.setMailPaperMode($event)"
           />
         </div>
-        
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary" :disabled="passwordLoading || !passwordFormValid">
-            <span v-if="passwordLoading">提交中...</span>
-            <span v-else>更新密码</span>
-          </button>
+
+        <div v-if="isMobile" class="fm-pref-row">
+          <div>
+            <div class="fm-pref-row__label">调试工具</div>
+            <div class="fm-pref-row__desc">打开连接诊断、Cookie 清理与 API 测试抽屉</div>
+          </div>
+          <el-button size="small" @click="openDebugDrawer">打开</el-button>
         </div>
-      </form>
+      </section>
+
+      <section class="fm-card fm-account-card fm-account-card--full">
+        <h2 class="fm-account-card__title">修改密码</h2>
+
+        <el-alert
+          v-if="pwdError"
+          type="error"
+          :closable="false"
+          show-icon
+          :title="pwdError"
+        />
+
+        <el-form
+          ref="pwdFormRef"
+          :model="pwdForm"
+          :rules="pwdRules"
+          label-position="top"
+          class="fm-pwd-form"
+          @submit.prevent="handleChangePassword"
+        >
+          <el-form-item label="当前密码" prop="oldPassword">
+            <el-input
+              v-model="pwdForm.oldPassword"
+              type="password"
+              show-password
+              autocomplete="current-password"
+            />
+          </el-form-item>
+
+          <el-form-item label="新密码" prop="newPassword">
+            <el-input
+              v-model="pwdForm.newPassword"
+              type="password"
+              show-password
+              placeholder="至少 8 个字符"
+              autocomplete="new-password"
+            />
+          </el-form-item>
+
+          <el-form-item label="确认新密码" prop="confirmPassword">
+            <el-input
+              v-model="pwdForm.confirmPassword"
+              type="password"
+              show-password
+              autocomplete="new-password"
+            />
+          </el-form-item>
+
+          <div>
+            <el-button type="primary" native-type="submit" :loading="savingPwd">
+              保存新密码
+            </el-button>
+          </div>
+        </el-form>
+      </section>
     </div>
   </div>
 </template>
 
-<script>
-import { mapGetters, mapActions } from 'vuex';
+<script setup>
+import { ref, reactive, computed, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import { useAuthStore } from '@/stores/auth'
+import { useUiStore } from '@/stores/ui'
+import { useBreakpoint } from '@/composables/useBreakpoint'
+import PageHeader from '@/components/common/PageHeader.vue'
+import StatusPill from '@/components/common/StatusPill.vue'
+import SegmentedFilter from '@/components/common/SegmentedFilter.vue'
 
-export default {
-  name: 'AccountView',
-  data() {
-    return {
-      passwordData: {
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
+const THEME_OPTIONS = [
+  { value: 'light', label: '亮色' },
+  { value: 'dark', label: '暗色' },
+  { value: 'system', label: '跟随系统' }
+]
+
+const auth = useAuthStore()
+const ui = useUiStore()
+const { isMobile } = useBreakpoint()
+
+const pwdFormRef = ref(null)
+const savingPwd = ref(false)
+const pwdError = ref('')
+
+const pwdForm = reactive({
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+
+const username = computed(() => auth.currentUser?.username || '—')
+
+const pwdRules = {
+  oldPassword: [{ required: true, message: '请输入当前密码', trigger: 'blur' }],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 8, message: '新密码长度不能少于 8 个字符', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    {
+      validator: (_rule, val, cb) => {
+        if (val !== pwdForm.newPassword) cb(new Error('两次输入的新密码不一致'))
+        else cb()
       },
-      passwordLoading: false,
-      passwordMessage: null
-    };
-  },
-  computed: {
-    ...mapGetters('auth', ['currentUser']),
-    passwordFormValid() {
-      return this.passwordData.currentPassword.length > 0 && 
-             this.passwordData.newPassword.length >= 6 && 
-             this.passwordData.newPassword === this.passwordData.confirmPassword;
+      trigger: 'blur'
     }
-  },
-  methods: {
-    ...mapActions('auth', ['changeUserPassword']),
-    formatDate(dateString) {
-      if (!dateString) return '未知';
-      
-      const date = new Date(dateString);
-      return new Intl.DateTimeFormat('zh-CN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }).format(date);
-    },
-    async changePassword() {
-      // 表单验证
-      if (!this.passwordFormValid) {
-        if (this.passwordData.newPassword.length < 6) {
-          this.passwordMessage = {
-            type: 'error',
-            text: '新密码长度应至少为6个字符'
-          };
-        } else if (this.passwordData.newPassword !== this.passwordData.confirmPassword) {
-          this.passwordMessage = {
-            type: 'error',
-            text: '两次输入的新密码不一致'
-          };
-        }
-        return;
-      }
-      
-      this.passwordLoading = true;
-      this.passwordMessage = null;
-      
-      try {
-        await this.changeUserPassword({
-          currentPassword: this.passwordData.currentPassword,
-          newPassword: this.passwordData.newPassword
-        });
-        
-        // 成功提示
-        this.passwordMessage = {
-          type: 'success',
-          text: '密码已成功更新'
-        };
-        
-        // 重置表单
-        this.passwordData = {
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
-        };
-      } catch (error) {
-        this.passwordMessage = {
-          type: 'error',
-          text: error.response?.data?.message || '密码更新失败，请检查当前密码是否正确'
-        };
-      } finally {
-        this.passwordLoading = false;
-      }
+  ]
+}
+
+watch(
+  () => pwdForm.newPassword,
+  () => {
+    if (pwdForm.confirmPassword) {
+      pwdFormRef.value?.validateField('confirmPassword').catch(() => {})
     }
   }
-};
+)
+
+function openDebugDrawer() {
+  ui.setShowDebugTools(true)
+  ui.setDebugDrawerOpen(true)
+}
+
+async function handleChangePassword() {
+  pwdError.value = ''
+  const ok = await pwdFormRef.value?.validate().catch(() => false)
+  if (!ok) return
+
+  savingPwd.value = true
+  try {
+    await auth.changePassword({
+      oldPassword: pwdForm.oldPassword,
+      newPassword: pwdForm.newPassword
+    })
+    ElMessage.success('密码已成功更新')
+    pwdForm.oldPassword = ''
+    pwdForm.newPassword = ''
+    pwdForm.confirmPassword = ''
+    pwdFormRef.value?.clearValidate()
+  } catch (err) {
+    pwdError.value = err?.response?.data?.error || err?.message || '修改密码失败'
+  } finally {
+    savingPwd.value = false
+  }
+}
 </script>
 
 <style scoped>
-.account-container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
+.fm-account-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--fm-space-5);
 }
 
-.account-header {
-  margin-bottom: 30px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
-}
-
-.account-header h1 {
-  font-size: 28px;
-  font-weight: 500;
-  color: #333;
-}
-
-.account-section {
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  padding: 25px;
-  margin-bottom: 30px;
-}
-
-.account-section h2 {
-  font-size: 20px;
-  font-weight: 500;
-  margin-bottom: 20px;
-  color: #333;
-}
-
-.account-info {
-  margin-bottom: 20px;
-}
-
-.info-row {
-  padding: 12px 0;
+.fm-account-card {
+  padding: var(--fm-space-5);
   display: flex;
-  border-bottom: 1px solid #eee;
+  flex-direction: column;
+  gap: var(--fm-space-4);
 }
 
-.info-row:last-child {
+.fm-account-card--full {
+  grid-column: 1 / -1;
+}
+
+.fm-account-card__title {
+  margin: 0;
+  font-size: var(--fm-fs-md);
+  font-weight: 600;
+  color: var(--fm-text);
+}
+
+.fm-profile-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--fm-border);
+}
+
+.fm-profile-row:last-child {
   border-bottom: none;
 }
 
-.info-label {
-  flex: 0 0 120px;
+.fm-profile-row__label {
+  font-size: var(--fm-fs-sm);
+  color: var(--fm-text-2);
+}
+
+.fm-profile-row__val {
+  font-size: var(--fm-fs-sm);
   font-weight: 500;
-  color: #666;
+  color: var(--fm-text);
 }
 
-.info-value {
-  flex: 1;
-  color: #333;
+.fm-pref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fm-space-4);
+  flex-wrap: wrap;
 }
 
-.password-form {
-  margin-top: 20px;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
+.fm-pref-row__label {
+  font-size: var(--fm-fs-sm);
   font-weight: 500;
+  color: var(--fm-text);
 }
 
-.form-control {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 16px;
-  transition: border-color 0.3s;
+.fm-pref-row__desc {
+  font-size: var(--fm-fs-xs);
+  color: var(--fm-text-3);
+  margin-top: 2px;
 }
 
-.form-control:focus {
-  border-color: #42b983;
-  outline: none;
+.fm-pwd-form {
+  max-width: 440px;
 }
 
-.form-text {
-  display: block;
-  margin-top: 5px;
-  font-size: 12px;
+@media (max-width: 1023.98px) {
+  .fm-account-grid {
+    grid-template-columns: 1fr;
+  }
 }
-
-.text-muted {
-  color: #6c757d;
-}
-
-.btn {
-  display: inline-block;
-  padding: 10px 20px;
-  font-size: 16px;
-  font-weight: 500;
-  text-align: center;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s, opacity 0.3s;
-  border: none;
-}
-
-.btn-primary {
-  background-color: #42b983;
-  color: white;
-}
-
-.btn-primary:hover {
-  background-color: #3aa876;
-}
-
-.btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.form-actions {
-  margin-top: 30px;
-}
-
-.alert {
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-}
-
-.alert-success {
-  background-color: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-
-.alert-danger {
-  background-color: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-</style> 
+</style>

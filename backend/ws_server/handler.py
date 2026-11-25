@@ -5,7 +5,6 @@ import asyncio
 import logging
 import websockets
 import jwt
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 # 确保可导入 backend 根下的 jwt_config
@@ -23,6 +22,8 @@ def _serialize_email(email_row):
     """脱敏后序列化邮箱（与 HTTP API 保持一致）"""
     if not email_row:
         return None
+    from utils.email.token_service import channel_for_scope, hint_for
+
     data = dict(email_row)
     if data.get('password'):
         data['password'] = '******'
@@ -30,6 +31,12 @@ def _serialize_email(email_row):
         data['refresh_token'] = '******'
     if 'access_token' in data:
         data['access_token'] = None
+    if data.get('mail_type') == 'outlook' and data.get('oauth_scope') is not None:
+        data['mail_channel'] = channel_for_scope(data.get('oauth_scope'))
+    else:
+        data['mail_channel'] = None
+    err_code = data.get('last_refresh_error_code')
+    data['last_refresh_error_hint'] = hint_for(err_code) if err_code else ''
     return data
 
 
@@ -411,7 +418,9 @@ class WebSocketHandler:
                 # 与 HTTP 路径一致：入库前校验 OAuth token
                 try:
                     from utils.email.outlook import OutlookMailHandler
-                    token_result = OutlookMailHandler.refresh_access_token(refresh_token, client_id)
+                    token_result = OutlookMailHandler.refresh_access_token(
+                        refresh_token, client_id, email=email
+                    )
                     if not token_result.get('success'):
                         err = token_result.get('error') or token_result.get('error_code') or '未知错误'
                         await websocket.send(json.dumps({
@@ -438,6 +447,8 @@ class WebSocketHandler:
                             access_token,
                             refresh_token=refresh_token,
                             expires_in=token_result.get('expires_in'),
+                            rotated=bool(token_result.get('rotated')),
+                            oauth_scope=token_result.get('scope_used'),
                         )
                     except Exception as e:
                         logger.warning(f"保存初始 access_token 失败: {e}")
@@ -580,7 +591,24 @@ class WebSocketHandler:
             logger.debug(f"成功向用户 {user_id} 的 {success_count} 个连接广播消息: {message['type']}")
         
         return success_count > 0
-    
+
+    def push_to_user(self, user_id, payload):
+        """线程安全地从后台线程向指定用户推送 WS 消息（用于 ImportJobRegistry 等回调）。"""
+        loop = self._loop
+        if loop is None or loop.is_closed():
+            return False
+        if user_id not in self.user_sockets:
+            return False
+        try:
+            asyncio.run_coroutine_threadsafe(
+                self.broadcast_to_user(user_id, payload),
+                loop,
+            )
+            return True
+        except Exception as e:
+            logger.debug(f"线程安全推送用户 {user_id} 消息失败: {e}")
+            return False
+
     async def broadcast_emails_deleted(self, email_ids):
         """向所有连接的客户端广播邮箱已删除的消息"""
         message = json.dumps({
@@ -598,11 +626,19 @@ class WebSocketHandler:
                 # 这里不需要删除连接，因为错误会导致连接关闭，unregister_client会处理
     
     async def handle_import_emails(self, websocket, user_id, data):
-        """处理导入邮箱的请求（校验 token，返回结构化失败详情）"""
+        """处理导入邮箱的请求（先毫秒级入库，后台限速首验并通过 import_progress 推送进度）"""
         try:
             import_data = data.get('data', '')
             mail_type = data.get('mail_type', data.get('mailType', 'outlook'))
-            validate = data.get('validate', True)
+            separator = data.get('separator', 'auto')
+            on_duplicate = data.get('on_duplicate', data.get('onDuplicate', 'skip'))
+            raw_verify = data.get('verify')
+            if raw_verify is None:
+                raw_verify = data.get('validate', True)
+            if isinstance(raw_verify, str):
+                verify = raw_verify.lower() not in ('0', 'false', 'no')
+            else:
+                verify = bool(raw_verify)
 
             if not import_data:
                 await websocket.send(json.dumps({
@@ -621,25 +657,37 @@ class WebSocketHandler:
 
             await websocket.send(json.dumps({
                 'type': 'info',
-                'message': '正在校验并导入邮箱，请稍候（无效 Token 会被拒绝）...'
+                'message': '正在入库邮箱，请稍候…'
             }))
 
-            # 在线程池中执行，避免阻塞事件循环（会请求微软刷新接口）
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             from utils.email.import_helper import import_email_lines
+            from utils.email.import_jobs import get_import_job_registry
 
             def _do_import():
+                reg = get_import_job_registry(self.db)
+                reg.set_notifier(self.push_to_user)
                 return import_email_lines(
                     self.db,
                     user_id,
                     import_data,
                     mail_type=mail_type,
-                    validate_credentials=bool(validate),
+                    validate_credentials=verify,
+                    separator=separator,
+                    on_duplicate=on_duplicate,
+                    registry=reg,
                 )
 
             result = await loop.run_in_executor(None, _do_import)
 
-            # 结构化结果，供前端 ImportView 展示失败表格
+            if result.get('over_limit'):
+                await websocket.send(json.dumps({
+                    'type': 'error',
+                    'message': result.get('error') or '导入行数超出上限，请分批导入',
+                }))
+                return
+
+            # 结构化结果（含 job_id）
             await websocket.send(json.dumps({
                 'type': 'import_result',
                 **result,
@@ -650,29 +698,13 @@ class WebSocketHandler:
                     'type': 'emails_imported',
                     'success': result['success'],
                     'failed': result['failed'],
-                }))
-
-            # 有失败时再发一条醒目提示
-            if result.get('failed', 0) > 0:
-                reasons = []
-                for item in result.get('failed_details', [])[:5]:
-                    email = item.get('email') or f"第{item.get('line')}行"
-                    reasons.append(f"{email}: {item.get('reason')}")
-                more = ''
-                if result['failed'] > 5:
-                    more = f"\n...另有 {result['failed'] - 5} 条失败"
-                await websocket.send(json.dumps({
-                    'type': 'warning',
-                    'message': (
-                        f"有 {result['failed']} 个邮箱导入失败（未写入）：\n"
-                        + "\n".join(reasons)
-                        + more
-                    ),
+                    'job_id': result.get('job_id'),
                 }))
 
             logger.info(
-                f"用户ID {user_id} 批量导入完成: "
-                f"成功={result.get('success')} 失败={result.get('failed')}"
+                f"用户ID {user_id} 批量入库完成: "
+                f"新增={result.get('added')} 更新={result.get('updated')} "
+                f"跳过={result.get('skipped')} 失败={result.get('failed')} job_id={result.get('job_id')}"
             )
         except Exception as e:
             logger.error(f"导入邮箱失败: {str(e)}")

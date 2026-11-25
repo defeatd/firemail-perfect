@@ -1,382 +1,208 @@
 <template>
-  <div class="about-container">
-    <div class="about-header">
-      <h1 class="page-title">关于花火邮箱助手</h1>
-      <div class="version-badge">v1.0.0</div>
+  <div class="fm-about-view">
+    <PageHeader
+      title="关于 FireMail"
+      subtitle="Outlook 邮箱池 · 精准取件 · 90 天令牌自动保活工作台"
+    >
+      <template v-if="!auth.isAuthenticated" #actions>
+        <el-button type="primary" @click="router.push('/login')">前往登录</el-button>
+      </template>
+    </PageHeader>
+
+    <div class="fm-about-grid">
+      <section class="fm-card fm-about-card">
+        <h2 class="fm-about-card__title">项目概览</h2>
+        <p class="fm-about-card__desc">
+          FireMail（花火邮箱助手）是一套面向多邮箱资产集中管理、实时收信、验证码快速提取与 Microsoft Outlook OAuth2 Refresh Token 90 天生命周期自动保活的现代 Web 工作台。
+        </p>
+        <KeyValueList :items="projectInfo" />
+      </section>
+
+      <section class="fm-card fm-about-card">
+        <h2 class="fm-about-card__title">技术栈</h2>
+        <p class="fm-about-card__desc">
+          前后端分离架构，结合 WebSocket 实时推送与本地零外链字体加载，兼顾响应速度与安全隔离。
+        </p>
+        <div class="fm-about-tags">
+          <span v-for="tech in TECH_STACK" :key="tech" class="fm-about-tag fm-mono">
+            {{ tech }}
+          </span>
+        </div>
+      </section>
+
+      <section class="fm-card fm-about-card fm-about-card--full">
+        <h2 class="fm-about-card__title">核心能力</h2>
+        <div class="fm-about-features">
+          <article v-for="feat in FEATURES" :key="feat.title" class="fm-about-feat">
+            <h3 class="fm-about-feat__title">{{ feat.title }}</h3>
+            <p class="fm-about-feat__desc">{{ feat.desc }}</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="fm-card fm-about-card fm-about-card--full">
+        <h2 class="fm-about-card__title">使用注意事项</h2>
+        <ul class="fm-about-notices">
+          <li v-for="note in NOTICES" :key="note">{{ note }}</li>
+        </ul>
+      </section>
     </div>
-    
-    <el-row :gutter="20">
-      <el-col :xs="24" :md="8">
-        <el-card class="info-card static-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <h2><el-icon><InfoFilled /></el-icon> 项目介绍</h2>
-            </div>
-          </template>
-          <div class="card-content">
-            <p>花火邮箱助手是一款专为Microsoft邮箱设计的批量收件工具，旨在提供简单高效的邮件管理解决方案。</p>
-            <p>通过实时的WebSocket通信，多线程并行处理，用户可以轻松管理多个邮箱账户，批量收取邮件。</p>
-          </div>
-        </el-card>
-      </el-col>
-      
-      <el-col :xs="24" :md="8">
-        <el-card class="info-card static-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <h2><el-icon><TrendCharts /></el-icon> 版本信息</h2>
-            </div>
-          </template>
-          <div class="card-content">
-            <ul class="info-list">
-              <li>
-                <span class="label">当前版本:</span>
-                <span class="value">v1.0.0</span>
-              </li>
-              <li>
-                <span class="label">更新日期:</span>
-                <span class="value">{{ new Date().toLocaleDateString() }}</span>
-              </li>
-              <li>
-                <span class="label">协议:</span>
-                <span class="value">MIT</span>
-              </li>
-            </ul>
-          </div>
-        </el-card>
-      </el-col>
-      
-      <el-col :xs="24" :md="8">
-        <el-card class="info-card static-card" shadow="never">
-          <template #header>
-            <div class="card-header">
-              <h2><el-icon><Monitor /></el-icon> 技术栈</h2>
-            </div>
-          </template>
-          <div class="card-content">
-            <div class="tech-tags">
-              <el-tag class="tech-tag">Python 3.13</el-tag>
-              <el-tag class="tech-tag" type="success">Flask</el-tag>
-              <el-tag class="tech-tag" type="warning">SQLite</el-tag>
-              <el-tag class="tech-tag" type="danger">WebSocket</el-tag>
-              <el-tag class="tech-tag">Vue 3</el-tag>
-              <el-tag class="tech-tag" type="success">Vite</el-tag>
-              <el-tag class="tech-tag" type="warning">Element Plus</el-tag>
-              <el-tag class="tech-tag" type="info">OAuth 2.0</el-tag>
-              <el-tag class="tech-tag" type="danger">IMAP</el-tag>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
-    
-    <el-card class="features-card static-card" shadow="never">
-      <template #header>
-        <div class="card-header">
-          <h2><el-icon><Star /></el-icon> 功能特点</h2>
-        </div>
-      </template>
-      <div class="features-grid">
-        <div class="feature-item" v-for="(feature, index) in features" :key="index">
-          <div class="feature-icon">
-            <el-icon><component :is="feature.icon" /></el-icon>
-          </div>
-          <div class="feature-content">
-            <h3>{{ feature.title }}</h3>
-            <p>{{ feature.description }}</p>
-          </div>
-        </div>
-      </div>
-    </el-card>
-    
-    <el-card class="notice-card static-card" shadow="never">
-      <template #header>
-        <div class="card-header">
-          <h2><el-icon><Warning /></el-icon> 注意事项</h2>
-        </div>
-      </template>
-      <div class="notice-content">
-        <div
-          v-for="(notice, index) in notices"
-          :key="index"
-          class="notice-item"
-        >
-          <el-icon class="notice-icon"><InfoFilled /></el-icon>
-          <span class="notice-text">{{ notice }}</span>
-        </div>
-      </div>
-    </el-card>
   </div>
 </template>
 
 <script setup>
-import { InfoFilled, Star, Warning, Monitor, TrendCharts, Connection, DocumentCopy, Upload, Finished, Management } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import PageHeader from '@/components/common/PageHeader.vue'
+import KeyValueList from '@/components/common/KeyValueList.vue'
 
-const features = [
+const appVersion =
+  import.meta.env.VITE_APP_VERSION || (typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.0.0')
+
+const router = useRouter()
+const auth = useAuthStore()
+
+const projectInfo = [
+  { label: '应用名称', value: 'FireMail（花火邮箱助手）' },
+  { label: '当前版本', value: `v${appVersion}`, mono: true },
+  { label: '支持协议', value: 'Microsoft OAuth2 / IMAP / WebSocket', mono: true },
+  { label: '安全隔离', value: 'DOMPurify + 无脚本 Sandboxed Iframe' }
+]
+
+const TECH_STACK = [
+  'Vue 3',
+  'Pinia',
+  'Vue Router',
+  'Element Plus',
+  'Vite',
+  'DOMPurify',
+  'Flask',
+  'SQLite',
+  'WebSockets'
+]
+
+const FEATURES = [
   {
-    icon: 'Management',
-    title: '邮箱管理',
-    description: '提供邮箱添加、查看、删除等功能，支持单个和批量导入邮箱'
+    title: '多协议邮箱资产统一纳管',
+    desc: '同时支持 Outlook / Hotmail、通用 IMAP、Gmail 与 QQ 邮箱，提供批量校验导入与标准四段格式导出。'
   },
   {
-    icon: 'DocumentCopy',
-    title: '批量管理',
-    description: '支持多选、全选邮箱，进行批量删除、收信，允许单个邮箱手动收信'
+    title: '90 天 Refresh Token 自动保活',
+    desc: '后台按到期优先级自动轮换续期，结合 AADSTS 错误分类、健康态势条与寿命进度条实现到期前主动预警。'
   },
   {
-    icon: 'Connection',
-    title: 'WebSocket支持',
-    description: '实时通信，及时反馈处理进度和结果'
+    title: 'Device Code 免提取快捷授权',
+    desc: '内置微软设备码引导流程，无需手动抓取 Refresh Token 即可一键完成新增或重新授权。'
   },
   {
-    icon: 'Finished',
-    title: '多线程处理',
-    description: '提高邮件收取效率，支持并行处理多个邮箱'
+    title: '沉浸式收件箱与验证码快取',
+    desc: '双栏桌面阅读器与全屏移动抽屉，自动打分识别主流中英文验证码并支持列表级一键复制。'
   },
   {
-    icon: 'Monitor',
-    title: '简洁界面',
-    description: '简约现代的用户界面，操作简单直观'
+    title: 'WebSocket 实时同步推送',
+    desc: '收信进度、导入结果与批量变更实时回传前端，支持按邮箱独立开启实时收信轮询。'
   },
   {
-    icon: 'Upload',
-    title: '跨平台支持',
-    description: '支持Windows和Linux平台，可打包为Docker容器部署'
+    title: '多用户权限与安全正文沙箱',
+    desc: '细粒度用户与管理员权限控制；所有 HTML 邮件均经 DOMPurify 清洗并运行在禁用脚本的沙箱框架中。'
   }
 ]
 
-const notices = [
-  '本工具仅用于方便用户管理自己的邮箱账户，请勿用于非法用途',
-  '邮箱账号和密码等敏感信息仅存储在本地SQLite数据库中，请确保服务器安全',
-  '由于Microsoft API限制，可能会有请求频率限制，请合理使用'
+const NOTICES = [
+  '敏感凭据（密码、Client ID、Refresh Token）仅在明确请求时按需下发并暂存于当前页面内存，请妥善保管导出文件。',
+  'Outlook 长期未活动账号的 Refresh Token 超过 90 天不续期将失效，建议保持后台 Token 保活调度处于运行状态。',
+  '遇到 AADSTS 强交互或风控告警（需重授）时，请通过「Device Code 重新授权」流程及时恢复令牌。'
 ]
 </script>
 
 <style scoped>
-.about-container {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.about-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 30px;
-  position: relative;
-}
-
-.page-title {
-  font-size: 2rem;
-  color: var(--primary-color);
-  margin: 0;
-  position: relative;
-  display: inline-block;
-}
-
-.page-title::after {
-  content: '';
-  position: absolute;
-  bottom: -8px;
-  left: 0;
-  width: 60px;
-  height: 4px;
-  background-color: var(--primary-color);
-  border-radius: var(--border-radius-full);
-}
-
-.version-badge {
-  background-color: var(--primary-color);
-  color: white;
-  border-radius: 20px;
-  padding: 4px 12px;
-  font-size: 0.9rem;
-  margin-left: 15px;
-  font-weight: 500;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-}
-
-.card-header h2 {
-  font-size: 1.4rem;
-  margin: 0;
-  color: var(--primary-text-color);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* 纯展示卡片：无 hover 动效、无点击手势 */
-.static-card {
-  cursor: default;
-  transition: none !important;
-}
-
-.static-card:hover {
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-.static-card :deep(.el-card__body),
-.static-card :deep(.el-card__header) {
-  cursor: default;
-}
-
-.info-card {
-  height: 100%;
-  margin-bottom: 20px;
-}
-
-.card-content {
-  color: var(--regular-text-color);
-  line-height: 1.6;
-}
-
-.info-list {
-  list-style-type: none;
-  padding: 0;
-  margin: 0;
-}
-
-.info-list li {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 15px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid var(--border-color-lighter);
-}
-
-.info-list li:last-child {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.label {
-  font-weight: 500;
-  color: var(--primary-text-color);
-}
-
-.value {
-  color: var(--secondary-text-color);
-}
-
-.tech-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.tech-tag {
-  margin-right: 0;
-  cursor: default;
-  transition: none !important;
-}
-
-.tech-tag:hover {
-  transform: none !important;
-  opacity: 1 !important;
-}
-
-.features-card {
-  margin-bottom: 20px;
-}
-
-.features-grid {
+.fm-about-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--fm-space-5);
 }
 
-.feature-item {
-  display: flex;
-  gap: 15px;
-  padding: 15px;
-  border-radius: var(--border-radius);
-  cursor: default;
-  transition: none;
-}
-
-.feature-item:hover {
-  background-color: transparent;
-  transform: none;
-}
-
-.feature-icon {
-  font-size: 24px;
-  color: var(--primary-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background-color: rgba(59, 130, 246, 0.1);
-  flex-shrink: 0;
-}
-
-.feature-content h3 {
-  margin: 0 0 5px 0;
-  color: var(--primary-text-color);
-  font-size: 1.1rem;
-}
-
-.feature-content p {
-  margin: 0;
-  color: var(--regular-text-color);
-}
-
-.notice-card {
-  margin-bottom: 20px;
-}
-
-.notice-content {
+.fm-about-card {
+  padding: var(--fm-space-5);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--fm-space-4);
 }
 
-/* 注意事项统一浅色，不突出警示色 */
-.notice-item {
+.fm-about-card--full {
+  grid-column: 1 / -1;
+}
+
+.fm-about-card__title {
+  margin: 0;
+  font-size: var(--fm-fs-md);
+  font-weight: 600;
+  color: var(--fm-text);
+}
+
+.fm-about-card__desc {
+  margin: 0;
+  font-size: var(--fm-fs-sm);
+  color: var(--fm-text-2);
+  line-height: var(--fm-lh-base);
+}
+
+.fm-about-tags {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: 8px;
-  background: #F7F4EC;
-  border: 1px solid #E8E2D4;
-  color: #5c574e;
-  line-height: 1.55;
-  font-size: 0.95rem;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.notice-icon {
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: #A68B5B;
-  font-size: 16px;
+.fm-about-tag {
+  padding: 4px 10px;
+  border-radius: var(--fm-radius-pill);
+  background: var(--fm-bg-subtle);
+  border: 1px solid var(--fm-border);
+  font-size: var(--fm-fs-xs);
+  color: var(--fm-text-2);
 }
 
-.notice-text {
-  flex: 1;
-  min-width: 0;
+.fm-about-features {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--fm-space-4);
 }
 
-@media (max-width: 768px) {
-  .about-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  
-  .version-badge {
-    margin-left: 0;
-  }
-  
-  .features-grid {
+.fm-about-feat {
+  padding: var(--fm-space-4);
+  border-radius: var(--fm-radius-md);
+  background: var(--fm-surface-2);
+  border: 1px solid var(--fm-border);
+}
+
+.fm-about-feat__title {
+  margin: 0 0 6px;
+  font-size: var(--fm-fs-sm);
+  font-weight: 600;
+  color: var(--fm-text);
+}
+
+.fm-about-feat__desc {
+  margin: 0;
+  font-size: var(--fm-fs-xs);
+  color: var(--fm-text-2);
+  line-height: var(--fm-lh-base);
+}
+
+.fm-about-notices {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: var(--fm-fs-sm);
+  color: var(--fm-text-2);
+  line-height: var(--fm-lh-base);
+}
+
+@media (max-width: 1023.98px) {
+  .fm-about-grid,
+  .fm-about-features {
     grid-template-columns: 1fr;
   }
 }

@@ -1,0 +1,179 @@
+/* ==========================================================================
+   FireMail Design Tokens — Editorial Precision Workbench
+   Light: Crisp Warm Paper | Dark: Obsidian Zinc | Accent: Ember
+   ========================================================================== */
+
+:root {
+  /* Surface & Backgrounds */
+  --fm-bg: #F8F8F7;
+  --fm-bg-subtle: #F2F2F0;
+  --fm-surface: #FFFFFF;
+  --fm-surface-2: #FBFBFA;
+  --fm-surface-hover: #F4F4F2;
+  --fm-surface-active: #EEEEEC;
+
+  /* Hairline Borders */
+  --fm-border: #E7E6E3;
+  --fm-border-strong: #D6D5D1;
+
+  /* Typography Colors */
+  --fm-text: #18181B;
+  --fm-text-2: #52525B;
+  --fm-text-3: #8A8A93;
+  --fm-text-inverse: #FAFAFA;
+
+  /* Primary (Obsidian) */
+  --fm-primary: #18181B;
+  --fm-primary-hover: #27272A;
+  --fm-primary-soft: rgba(24, 24, 27, 0.06);
+
+  /* Accent (Ember) */
+  --fm-accent: #EA580C;
+  --fm-accent-hover: #C2410C;
+  --fm-accent-soft: #FFF1E8;
+  --fm-accent-border: #FDBA74;
+
+  /* Semantic Status Colors */
+  --fm-success: #059669;
+  --fm-success-soft: #ECFDF5;
+  --fm-success-border: #A7F3D0;
+
+  --fm-warning: #D97706;
+  --fm-warning-soft: #FFFBEB;
+  --fm-warning-border: #FDE68A;
+
+  --fm-danger: #E11D48;
+  --fm-danger-soft: #FFF1F2;
+  --fm-danger-border: #FECDD3;
+
+  --fm-info: #0284C7;
+  --fm-info-soft: #F0F9FF;
+  --fm-info-border: #BAE6FD;
+
+  --fm-muted-soft: rgba(24, 24, 27, 0.06);
+  --fm-muted-border: #D6D5D1;
+
+  /* Focus, Overlay & Paper */
+  --fm-focus-ring: 0 0 0 3px rgba(234, 88, 12, 0.20);
+  --fm-scrim: rgba(12, 13, 15, 0.32);
+  --fm-paper: #FFFFFF;
+  --fm-paper-text: #1A1A1A;
+
+  /* Typography */
+  --fm-font-sans: "Inter Variable", -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --fm-font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --fm-fs-xs: 12px;
+  --fm-fs-sm: 13px;
+  --fm-fs-md: 14px;
+  --fm-fs-lg: 16px;
+  --fm-fs-xl: 20px;
+  --fm-fs-2xl: 24px;
+  --fm-fs-3xl: 32px;
+
+  --fm-lh-tight: 1.35;
+  --fm-lh-base: 1.55;
+
+  /* Radii */
+  --fm-radius-xs: 4px;
+  --fm-radius-sm: 6px;
+  --fm-radius-md: 8px;
+  --fm-radius-lg: 12px;
+  --fm-radius-xl: 16px;
+  --fm-radius-pill: 999px;
+
+  /* Shadows */
+  --fm-shadow-xs: 0 1px 2px rgba(16, 16, 18, 0.04);
+  --fm-shadow-sm: 0 1px 3px rgba(16, 16, 18, 0.06), 0 1px 2px rgba(16, 16, 18, 0.04);
+  --fm-shadow-md: 0 8px 24px -8px rgba(16, 16, 18, 0.14);
+  --fm-shadow-overlay: 0 24px 48px -12px rgba(16, 16, 18, 0.22);
+
+  /* Spacing (4px grid) */
+  --fm-space-1: 4px;
+  --fm-space-2: 8px;
+  --fm-space-3: 12px;
+  --fm-space-4: 16px;
+  --fm-space-5: 20px;
+  --fm-space-6: 24px;
+  --fm-space-7: 32px;
+  --fm-space-8: 40px;
+  --fm-space-9: 48px;
+  --fm-space-10: 64px;
+
+  /* Motion */
+  --fm-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --fm-dur-fast: 120ms;
+  --fm-dur: 180ms;
+  --fm-dur-slow: 260ms;
+
+  /* Layout */
+  --fm-sidebar-w: 248px;
+  --fm-sidebar-w-collapsed: 64px;
+  --fm-topbar-h: 56px;
+  --fm-content-max: 1360px;
+  --fm-content-pad: 32px;
+
+  /* Z-index */
+  --fm-z-sidebar: 100;
+  --fm-z-topbar: 110;
+}
+
+html.dark {
+  --fm-bg: #0C0D0F;
+  --fm-bg-subtle: #101114;
+  --fm-surface: #14161A;
+  --fm-surface-2: #181A1F;
+  --fm-surface-hover: #1C1F25;
+  --fm-surface-active: #22252C;
+
+  --fm-border: rgba(255, 255, 255, 0.07);
+  --fm-border-strong: rgba(255, 255, 255, 0.12);
+
+  --fm-text: #EDEDEF;
+  --fm-text-2: #A1A1AA;
+  --fm-text-3: #6B6B76;
+  --fm-text-inverse: #0C0D0F;
+
+  --fm-primary: #EDEDEF;
+  --fm-primary-hover: #FFFFFF;
+  --fm-primary-soft: rgba(237, 237, 239, 0.08);
+
+  --fm-accent: #F97316;
+  --fm-accent-hover: #FB923C;
+  --fm-accent-soft: rgba(249, 115, 22, 0.12);
+  --fm-accent-border: rgba(249, 115, 22, 0.30);
+
+  --fm-success: #34D399;
+  --fm-success-soft: rgba(52, 211, 153, 0.12);
+  --fm-success-border: rgba(52, 211, 153, 0.28);
+
+  --fm-warning: #FBBF24;
+  --fm-warning-soft: rgba(251, 191, 36, 0.12);
+  --fm-warning-border: rgba(251, 191, 36, 0.28);
+
+  --fm-danger: #FB7185;
+  --fm-danger-soft: rgba(251, 113, 133, 0.12);
+  --fm-danger-border: rgba(251, 113, 133, 0.28);
+
+  --fm-info: #38BDF8;
+  --fm-info-soft: rgba(56, 189, 248, 0.12);
+  --fm-info-border: rgba(56, 189, 248, 0.28);
+
+  --fm-muted-soft: rgba(255, 255, 255, 0.06);
+  --fm-muted-border: rgba(255, 255, 255, 0.12);
+
+  --fm-focus-ring: 0 0 0 3px rgba(249, 115, 22, 0.28);
+  --fm-scrim: rgba(0, 0, 0, 0.60);
+
+  /* Dark mode micro-glint shadows */
+  --fm-shadow-xs: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 0 1px var(--fm-border);
+  --fm-shadow-sm: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 0 1px var(--fm-border);
+  --fm-shadow-md: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 12px 32px -12px rgba(0, 0, 0, 0.55);
+  --fm-shadow-overlay: 0 24px 48px -12px rgba(0, 0, 0, 0.60);
+}
+
+@media (max-width: 767.98px) {
+  :root {
+    --fm-content-pad: 16px;
+  }
+}

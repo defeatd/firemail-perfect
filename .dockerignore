@@ -4,7 +4,6 @@
 # 包含必要文件
 !backend/
 !frontend/**
-!requirements.txt
 !docker-entrypoint.sh
 !nginx.conf
 !Caddyfile
@@ -14,10 +13,22 @@
 **/*.pyc
 **/*.pyo
 **/*.pyd
+**/.pytest_cache/
+**/.ruff_cache/
 **/.git/
 **/.vscode/
 **/.idea/
 **/node_modules/
 **/.vite/
 frontend/dist/
-backend/data/*.db 
+frontend/src/tests/
+frontend/.eslintrc.cjs
+frontend/.eslintignore
+frontend/vitest.config.js
+backend/tests/
+backend/requirements-dev.txt
+backend/logs/
+backend/FireMail.log
+backend/data/*.db
+backend/data/*.db-*
+backend/data/*.lock

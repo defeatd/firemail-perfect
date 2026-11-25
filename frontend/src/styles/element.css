@@ -1,0 +1,293 @@
+/* ==========================================================================
+   Element Plus Token Bridge & Structural Refinements
+   NOTE: !important is strictly confined to this file for EP internal overrides.
+   ========================================================================== */
+
+:root {
+  --el-color-primary: var(--fm-primary);
+  --el-color-primary-light-3: #46464C;
+  --el-color-primary-light-5: #74747A;
+  --el-color-primary-light-7: #A8A8AE;
+  --el-color-primary-light-8: #D0D0D4;
+  --el-color-primary-light-9: #F1F1F2;
+  --el-color-primary-dark-2: #09090B;
+
+  --el-color-success: var(--fm-success);
+  --el-color-success-light-9: var(--fm-success-soft);
+  --el-color-warning: var(--fm-warning);
+  --el-color-warning-light-9: var(--fm-warning-soft);
+  --el-color-danger: var(--fm-danger);
+  --el-color-danger-light-9: var(--fm-danger-soft);
+  --el-color-info: var(--fm-info);
+  --el-color-info-light-9: var(--fm-info-soft);
+
+  --el-bg-color: var(--fm-surface);
+  --el-bg-color-page: var(--fm-bg);
+  --el-bg-color-overlay: var(--fm-surface);
+
+  --el-text-color-primary: var(--fm-text);
+  --el-text-color-regular: var(--fm-text-2);
+  --el-text-color-secondary: var(--fm-text-3);
+  --el-text-color-placeholder: var(--fm-text-3);
+
+  --el-border-color: var(--fm-border-strong);
+  --el-border-color-light: var(--fm-border);
+  --el-border-color-lighter: var(--fm-border);
+
+  --el-fill-color: var(--fm-surface-hover);
+  --el-fill-color-light: var(--fm-surface-2);
+  --el-fill-color-lighter: var(--fm-bg-subtle);
+  --el-fill-color-blank: var(--fm-surface);
+
+  --el-border-radius-base: var(--fm-radius-sm);
+  --el-border-radius-small: var(--fm-radius-xs);
+  --el-font-family: var(--fm-font-sans);
+  --el-font-size-base: var(--fm-fs-sm);
+  --el-component-size: 32px;
+  --el-component-size-small: 26px;
+  --el-switch-on-color: var(--fm-success);
+  --el-mask-color: var(--fm-scrim);
+}
+
+html.dark {
+  --el-color-primary: var(--fm-primary);
+  --el-color-primary-light-3: #C8C8CC;
+  --el-color-primary-light-5: #9999A0;
+  --el-color-primary-light-7: #66666E;
+  --el-color-primary-light-8: #3D3F46;
+  --el-color-primary-light-9: #23252C;
+  --el-color-primary-dark-2: #FFFFFF;
+
+  --el-bg-color: var(--fm-surface);
+  --el-bg-color-page: var(--fm-bg);
+  --el-bg-color-overlay: var(--fm-surface);
+
+  --el-text-color-primary: var(--fm-text);
+  --el-text-color-regular: var(--fm-text-2);
+  --el-text-color-secondary: var(--fm-text-3);
+  --el-text-color-placeholder: var(--fm-text-3);
+
+  --el-border-color: var(--fm-border-strong);
+  --el-border-color-light: var(--fm-border);
+  --el-border-color-lighter: var(--fm-border);
+
+  --el-fill-color: var(--fm-surface-hover);
+  --el-fill-color-light: var(--fm-surface-2);
+  --el-fill-color-lighter: var(--fm-bg-subtle);
+  --el-fill-color-blank: var(--fm-surface);
+}
+
+/* Primary button inverse contrast in Dark mode (EP uses white text by default) */
+html.dark .el-button--primary:not(.is-plain):not(.is-link):not(.is-text) {
+  color: var(--fm-text-inverse) !important;
+}
+
+/* Button baseline: crisp, zero gradients, focus ring */
+.el-button {
+  font-weight: 500;
+  transition: background-color var(--fm-dur-fast) var(--fm-ease),
+    border-color var(--fm-dur-fast) var(--fm-ease),
+    color var(--fm-dur-fast) var(--fm-ease);
+}
+
+.el-button:focus-visible {
+  outline: none;
+  box-shadow: var(--fm-focus-ring);
+}
+
+/* Inputs & Selects */
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select__wrapper {
+  background-color: var(--fm-surface-2) !important;
+  box-shadow: 0 0 0 1px var(--fm-border-strong) inset !important;
+  border-radius: var(--fm-radius-sm) !important;
+  transition: box-shadow var(--fm-dur-fast) var(--fm-ease);
+}
+
+.el-input__wrapper.is-focus,
+.el-textarea__inner:focus,
+.el-select__wrapper.is-focused {
+  box-shadow: 0 0 0 1px var(--fm-accent) inset, var(--fm-focus-ring) !important;
+}
+
+/* Table: hairline horizontal dividers, crisp subtle header */
+.el-table {
+  --el-table-bg-color: var(--fm-surface);
+  --el-table-tr-bg-color: var(--fm-surface);
+  --el-table-header-bg-color: var(--fm-bg-subtle);
+  --el-table-row-hover-bg-color: var(--fm-surface-hover);
+  --el-table-border-color: var(--fm-border);
+  --el-table-text-color: var(--fm-text);
+  --el-table-header-text-color: var(--fm-text-3);
+  border-radius: var(--fm-radius-lg);
+}
+
+.el-table th.el-table__cell {
+  font-size: var(--fm-fs-xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  height: 38px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--fm-border) !important;
+}
+
+.el-table td.el-table__cell {
+  height: 48px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--fm-border) !important;
+}
+
+.el-table__inner-wrapper::before {
+  display: none;
+}
+
+/* Dialog: hairline header/footer + overlay shadow */
+.el-dialog {
+  border-radius: var(--fm-radius-lg) !important;
+  background: var(--fm-surface) !important;
+  border: 1px solid var(--fm-border);
+  box-shadow: var(--fm-shadow-overlay) !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.el-dialog__header {
+  padding: 16px 20px !important;
+  margin-right: 0 !important;
+  border-bottom: 1px solid var(--fm-border);
+}
+
+.el-dialog__title {
+  font-size: var(--fm-fs-lg) !important;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fm-text) !important;
+}
+
+.el-dialog__body {
+  padding: 20px !important;
+  color: var(--fm-text);
+}
+
+.el-dialog__footer {
+  padding: 12px 20px !important;
+  border-top: 1px solid var(--fm-border);
+  background: var(--fm-bg-subtle);
+}
+
+@media (max-width: 767.98px) {
+  .el-dialog {
+    max-width: calc(100vw - 24px) !important;
+    margin: 16px auto !important;
+  }
+  .el-dialog.is-fullscreen {
+    max-width: 100vw !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+}
+
+/* Drawer */
+.el-drawer {
+  background: var(--fm-surface) !important;
+  border-left: 1px solid var(--fm-border);
+}
+
+.el-drawer__header {
+  margin-bottom: 0 !important;
+  padding: 16px 20px !important;
+  border-bottom: 1px solid var(--fm-border);
+  color: var(--fm-text) !important;
+  font-weight: 600;
+}
+
+.el-drawer__body {
+  padding: 20px !important;
+}
+
+/* Dropdown & Popover */
+.el-dropdown-menu,
+.el-popper.is-light {
+  background: var(--fm-surface) !important;
+  border: 1px solid var(--fm-border-strong) !important;
+  box-shadow: var(--fm-shadow-md) !important;
+  border-radius: var(--fm-radius-md) !important;
+}
+
+.el-dropdown-menu__item {
+  font-size: var(--fm-fs-sm);
+  color: var(--fm-text-2);
+  border-radius: var(--fm-radius-xs);
+  margin: 2px 4px;
+  padding: 6px 12px;
+}
+
+.el-dropdown-menu__item:hover {
+  background: var(--fm-surface-hover) !important;
+  color: var(--fm-text) !important;
+}
+
+/* Messages & Notifications: clean surface + 2px left semantic accent */
+.el-message,
+.el-notification {
+  background: var(--fm-surface) !important;
+  border: 1px solid var(--fm-border-strong) !important;
+  border-left-width: 3px !important;
+  box-shadow: var(--fm-shadow-md) !important;
+  border-radius: var(--fm-radius-md) !important;
+}
+
+.el-message--success,
+.el-notification:has(.el-notification--success) {
+  border-left-color: var(--fm-success) !important;
+}
+
+.el-message--warning,
+.el-notification:has(.el-notification--warning) {
+  border-left-color: var(--fm-warning) !important;
+}
+
+.el-message--error,
+.el-notification:has(.el-notification--error) {
+  border-left-color: var(--fm-danger) !important;
+}
+
+.el-message--info,
+.el-notification:has(.el-notification--info) {
+  border-left-color: var(--fm-info) !important;
+}
+
+/* Card defaults */
+.el-card {
+  background: var(--fm-surface) !important;
+  border: 1px solid var(--fm-border) !important;
+  border-radius: var(--fm-radius-lg) !important;
+  box-shadow: var(--fm-shadow-xs) !important;
+}
+
+/* Tag defaults */
+.el-tag {
+  border-radius: var(--fm-radius-pill);
+  font-weight: 500;
+}
+
+/* Dark-mode crisp inverse contrast for checked checkboxes & indeterminate */
+html.dark .el-checkbox__input.is-checked .el-checkbox__inner::after {
+  border-color: var(--fm-text-inverse) !important;
+}
+
+html.dark .el-checkbox__input.is-indeterminate .el-checkbox__inner::before {
+  background-color: var(--fm-text-inverse) !important;
+}
+
+/* Switch: Emerald ON track, neutral OFF track, crisp white thumb in both themes */
+.el-switch {
+  --el-switch-on-color: var(--fm-success) !important;
+  --el-switch-off-color: var(--fm-border-strong) !important;
+}
+
+.el-switch .el-switch__core .el-switch__action {
+  background-color: var(--fm-paper) !important;
+}

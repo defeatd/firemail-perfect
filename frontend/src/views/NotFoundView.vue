@@ -1,32 +1,32 @@
 <template>
-  <div class="not-found-container">
-    <el-result
-      icon="error"
-      title="404"
-      sub-title="抱歉，您访问的页面不存在"
+  <div class="fm-status-page">
+    <EmptyState
+      large
+      code="404"
+      :icon="QuestionFilled"
+      title="页面不存在"
+      description="您访问的地址可能已被移动或拼写有误，请返回首页继续操作。"
     >
-      <template #extra>
-        <el-button type="primary" @click="goHome">返回首页</el-button>
+      <template #actions>
+        <el-button type="primary" @click="router.push('/')">返回首页</el-button>
       </template>
-    </el-result>
+    </EmptyState>
   </div>
 </template>
 
 <script setup>
 import { useRouter } from 'vue-router'
+import { QuestionFilled } from '@element-plus/icons-vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 
 const router = useRouter()
-
-const goHome = () => {
-  router.push('/')
-}
 </script>
 
 <style scoped>
-.not-found-container {
+.fm-status-page {
   display: flex;
-  justify-content: center;
   align-items: center;
-  height: 70vh;
+  justify-content: center;
+  min-height: 60vh;
 }
-</style> 
+</style>

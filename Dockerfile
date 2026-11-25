@@ -6,9 +6,9 @@ COPY frontend /app/frontend
 
 # Build frontend
 WORKDIR /app/frontend
-# pnpm 10+/11 默认拦截依赖 postinstall（esbuild 等），需显式允许
-RUN corepack enable pnpm && \
-    pnpm config set dangerouslyAllowAllBuilds true && \
+# 锁定 pnpm 9.15.9（与 pnpm-lock.yaml v9.0 对齐），避免 corepack 漂移到未锁定主版本导致策略变更中断构建
+RUN corepack enable && \
+    corepack prepare pnpm@9.15.9 --activate && \
     pnpm install --frozen-lockfile && \
     pnpm build
 

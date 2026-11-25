@@ -1,364 +1,175 @@
 <template>
-  <div class="login-page">
-    <!-- Animated background -->
-    <div class="bg-gradient"></div>
-    <div class="bg-shapes">
-      <div class="shape shape-1"></div>
-      <div class="shape shape-2"></div>
-      <div class="shape shape-3"></div>
+  <div class="fm-auth-form">
+    <div class="fm-auth-form__head">
+      <h2 class="fm-auth-form__title">欢迎回来</h2>
+      <p class="fm-auth-form__sub">登录到 FireMail</p>
     </div>
 
-    <!-- Login card -->
-    <div class="login-card">
-      <div class="login-header">
-        <div class="logo-icon">
-          <el-icon :size="32"><Message /></el-icon>
-        </div>
-        <h1 class="login-title">欢迎回来</h1>
-        <p class="login-subtitle">登录到 FireMail 邮箱管理系统</p>
-      </div>
+    <el-alert
+      v-if="registeredSuccess"
+      type="success"
+      :closable="false"
+      show-icon
+      title="注册成功！请登录您的新账户。"
+    />
 
-      <el-alert
-        v-if="error"
-        :title="error"
-        type="error"
-        show-icon
-        :closable="false"
-        class="login-alert"
-      />
+    <el-alert
+      v-if="autoLoginFailed"
+      type="warning"
+      :closable="false"
+      show-icon
+      title="自动登录失败，请手动登录"
+    />
 
-      <el-alert
-        v-if="successMessage"
-        :title="successMessage"
-        type="success"
-        show-icon
-        :closable="false"
-        class="login-alert"
-      />
+    <el-alert
+      v-if="errorMessage"
+      type="error"
+      :closable="false"
+      show-icon
+      :title="errorMessage"
+    />
 
-      <el-form
-        ref="loginFormRef"
-        :model="loginForm"
-        :rules="loginRules"
-        class="login-form"
-        @submit.prevent="handleLogin"
+    <el-form
+      ref="formRef"
+      :model="form"
+      :rules="rules"
+      label-position="top"
+      @submit.prevent="handleSubmit"
+    >
+      <el-form-item label="用户名" prop="username">
+        <el-input
+          v-model="form.username"
+          placeholder="请输入用户名"
+          autocomplete="username"
+          size="large"
+        />
+      </el-form-item>
+
+      <el-form-item label="密码" prop="password">
+        <el-input
+          v-model="form.password"
+          type="password"
+          show-password
+          placeholder="请输入密码"
+          autocomplete="current-password"
+          size="large"
+          @keyup.enter="handleSubmit"
+        />
+      </el-form-item>
+
+      <el-button
+        type="primary"
+        size="large"
+        native-type="submit"
+        :loading="auth.loading"
+        class="fm-auth-form__submit"
       >
-        <el-form-item prop="username">
-          <el-input
-            v-model="loginForm.username"
-            size="large"
-            placeholder="请输入用户名"
-            :prefix-icon="User"
-            clearable
-          />
-        </el-form-item>
+        {{ auth.loading ? '登录中…' : '登录' }}
+      </el-button>
+    </el-form>
 
-        <el-form-item prop="password">
-          <el-input
-            v-model="loginForm.password"
-            type="password"
-            size="large"
-            placeholder="请输入密码"
-            :prefix-icon="Lock"
-            show-password
-            @keyup.enter="handleLogin"
-          />
-        </el-form-item>
-
-        <el-form-item>
-          <el-button
-            type="primary"
-            size="large"
-            class="login-btn"
-            :loading="loading"
-            @click="handleLogin"
-          >
-            {{ loading ? '登录中...' : '登 录' }}
-          </el-button>
-        </el-form-item>
-      </el-form>
-
-      <div class="login-footer">
-        <span class="footer-text">还没有账号?</span>
-        <router-link :to="{ name: 'register' }" class="register-link">
-          立即注册
-        </router-link>
-      </div>
+    <div v-if="auth.allowRegister" class="fm-auth-form__footer">
+      <span>还没有账号？</span>
+      <router-link to="/register" class="fm-auth-form__link">立即注册</router-link>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
-import { useStore } from 'vuex';
-import { useRouter, useRoute } from 'vue-router';
-import { User, Lock, Message } from '@element-plus/icons-vue';
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
-const store = useStore();
-const router = useRouter();
-const route = useRoute();
+const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
 
-const loginFormRef = ref(null);
-const loading = ref(false);
-const error = ref('');
-const successMessage = ref('');
+const formRef = ref(null)
+const errorMessage = ref('')
 
-const loginForm = reactive({
-  username: '',
+const form = reactive({
+  username: String(route.query.username || ''),
   password: ''
-});
+})
 
-const loginRules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' }
-  ]
-};
+const registeredSuccess = computed(
+  () => route.query.registered === '1' && route.query.autologin !== 'failed'
+)
+const autoLoginFailed = computed(() => route.query.autologin === 'failed')
+
+const rules = {
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+}
 
 onMounted(() => {
-  if (route.params.registrationSuccess) {
-    successMessage.value = '注册成功！请登录您的新账户。';
-    if (route.params.loginAttemptFailed) {
-      error.value = '自动登录失败，请手动登录';
-    }
-    if (route.params.username) {
-      loginForm.username = route.params.username;
-    }
+  auth.clearError()
+  auth.getConfig()
+})
+
+async function handleSubmit() {
+  errorMessage.value = ''
+  const ok = await formRef.value?.validate().catch(() => false)
+  if (!ok) return
+
+  try {
+    await auth.login({
+      username: form.username.trim(),
+      password: form.password
+    })
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/'
+    router.replace(redirect.startsWith('/') ? redirect : '/')
+  } catch (err) {
+    errorMessage.value =
+      err?.response?.data?.error ||
+      err?.response?.data?.message ||
+      auth.error ||
+      err?.message ||
+      '登录失败，请检查用户名和密码'
   }
-});
-
-const handleLogin = async () => {
-  if (!loginFormRef.value) return;
-
-  await loginFormRef.value.validate(async (valid) => {
-    if (!valid) return;
-
-    loading.value = true;
-    error.value = '';
-    successMessage.value = '';
-
-    try {
-      await store.dispatch('auth/login', {
-        username: loginForm.username,
-        password: loginForm.password
-      });
-      const redirectPath = route.query.redirect || '/';
-      router.push(redirectPath);
-    } catch (err) {
-      if (err.response?.data?.error) {
-        error.value = err.response.data.error;
-      } else if (err.message) {
-        error.value = err.message;
-      } else {
-        error.value = '登录失败，请检查用户名和密码';
-      }
-    } finally {
-      loading.value = false;
-    }
-  });
-};
+}
 </script>
 
 <style scoped>
-.login-page {
-  min-height: 100vh;
+.fm-auth-form {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  position: relative;
-  overflow: hidden;
+  flex-direction: column;
+  gap: var(--fm-space-4);
 }
 
-.bg-gradient {
-  position: fixed;
-  inset: 0;
-  /* 浅色背景，避免过重的棕金渐变 */
-  background: linear-gradient(160deg, #FBF9F4 0%, #F5F1E8 45%, #EFE9DC 100%);
-  z-index: -2;
-}
-
-.bg-shapes {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  overflow: hidden;
-}
-
-.shape {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(166, 139, 91, 0.06);
-  animation: float 20s infinite ease-in-out;
-}
-
-.shape-1 {
-  width: 400px;
-  height: 400px;
-  top: -100px;
-  left: -100px;
-  animation-delay: 0s;
-}
-
-.shape-2 {
-  width: 300px;
-  height: 300px;
-  bottom: -50px;
-  right: -50px;
-  animation-delay: -5s;
-}
-
-.shape-3 {
-  width: 200px;
-  height: 200px;
-  top: 50%;
-  left: 50%;
-  animation-delay: -10s;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  33% { transform: translateY(-30px) rotate(5deg); }
-  66% { transform: translateY(20px) rotate(-5deg); }
-}
-
-.login-card {
-  width: 100%;
-  max-width: 420px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 1.5rem;
-  padding: 2.5rem;
-  border: 1px solid rgba(224, 219, 208, 0.8);
-  box-shadow: 0 12px 32px -8px rgba(44, 42, 36, 0.08);
-  animation: slideUp 0.5s ease-out;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.login-header {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.logo-icon {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 1rem;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
-  border-radius: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
-}
-
-.login-title {
-  font-size: 1.75rem;
-  font-weight: 500;
-  color: #1E293B;
-  margin: 0 0 0.5rem 0;
-}
-
-.login-subtitle {
-  font-size: 0.95rem;
-  color: #64748B;
+.fm-auth-form__title {
   margin: 0;
+  font-size: var(--fm-fs-xl);
+  font-weight: 600;
+  color: var(--fm-text);
+  letter-spacing: -0.02em;
 }
 
-.login-alert {
-  margin-bottom: 1.5rem;
-  border-radius: 0.75rem;
+.fm-auth-form__sub {
+  margin: 4px 0 0;
+  font-size: var(--fm-fs-sm);
+  color: var(--fm-text-2);
 }
 
-.login-form {
-  margin-bottom: 1.5rem;
-}
-
-.login-form :deep(.el-input__wrapper) {
-  border-radius: 0.75rem;
-  padding: 0.25rem 0.75rem;
-  box-shadow: 0 0 0 1px #E2E8F0;
-  transition: all 0.25s ease;
-}
-
-.login-form :deep(.el-input__wrapper:hover) {
-  box-shadow: 0 0 0 1px var(--primary-color);
-}
-
-.login-form :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2), 0 0 0 1px var(--primary-color);
-}
-
-.login-form :deep(.el-form-item) {
-  margin-bottom: 1.25rem;
-}
-
-.login-btn {
+.fm-auth-form__submit {
   width: 100%;
-  height: 48px;
-  font-size: 1rem;
-  font-weight: 500;
-  border-radius: 0.75rem;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
-  border: none;
-  transition: all 0.25s ease;
+  margin-top: var(--fm-space-2);
 }
 
-.login-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
-}
-
-.login-btn:active {
-  transform: translateY(0);
-}
-
-.login-footer {
+.fm-auth-form__footer {
   text-align: center;
-  padding-top: 1rem;
-  border-top: 1px solid #E2E8F0;
+  font-size: var(--fm-fs-sm);
+  color: var(--fm-text-2);
 }
 
-.footer-text {
-  color: #64748B;
-  font-size: 0.95rem;
-}
-
-.register-link {
-  color: var(--primary-color);
+.fm-auth-form__link {
+  color: var(--fm-accent);
   font-weight: 500;
   text-decoration: none;
-  margin-left: 0.5rem;
-  transition: color 0.25s ease;
+  margin-left: 4px;
 }
 
-.register-link:hover {
-  color: var(--primary-dark);
+.fm-auth-form__link:hover {
   text-decoration: underline;
-}
-
-@media (max-width: 480px) {
-  .login-card {
-    padding: 1.5rem;
-    border-radius: 1.25rem;
-  }
-
-  .login-title {
-    font-size: 1.5rem;
-  }
 }
 </style>

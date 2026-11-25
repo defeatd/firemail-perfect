@@ -93,3 +93,27 @@ CLAUDE.md
 docker-compose.override.yml
 docker-compose.yml.bak
 docker-compose.yml.bak2
+
+# 测试 / Lint 缓存与覆盖率
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage/
+frontend/coverage/
+
+# 运行时锁与 SQLite 日志（精确匹配，不要写 *.lock，以免误伤 package-lock.json / pnpm-lock.yaml）
+*.db.lock
+*.db-journal
+outlook_token_keeper.lock
+
+# 密钥与证书（防误提交）
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+*.keystore

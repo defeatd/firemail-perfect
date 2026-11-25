@@ -2,14 +2,28 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8">
-    <link rel="icon" href="/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>花火邮箱助手</title>
-    <!-- 开发环境通过Vite代理，生产环境通过反向代理，使用相对路径即可 -->
-    <script>
-      window.API_URL = '/api';
-      window.WS_URL = '/ws';
-      document.cookie = "CookieConsent=true; SameSite=None; Secure; Partitioned;";
+    <title>FireMail</title>
+    <script data-cfasync="false">
+      (function () {
+        try {
+          var pref = localStorage.getItem('fm_theme') || 'system';
+          var dark = pref === 'dark' || (pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var root = document.documentElement;
+          if (dark) {
+            root.classList.add('dark');
+            root.style.colorScheme = 'dark';
+          } else {
+            root.classList.remove('dark');
+            root.style.colorScheme = 'light';
+          }
+        } catch (_e) {
+          // ignore storage errors
+        }
+      })();
+      window.API_URL = window.API_URL || '/api';
+      window.WS_URL = window.WS_URL || '/ws';
     </script>
   </head>
   <body>

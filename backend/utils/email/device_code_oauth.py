@@ -327,6 +327,7 @@ def _persist_tokens(
                     access_token,
                     refresh_token=refresh_token,
                     expires_in=expires_in,
+                    rotated=bool(refresh_token),
                 )
             if hasattr(db, "set_email_auth_status"):
                 db.set_email_auth_status(email_id, "ok", None)
@@ -347,6 +348,7 @@ def _persist_tokens(
                     access_token,
                     refresh_token=refresh_token,
                     expires_in=expires_in,
+                    rotated=bool(refresh_token),
                 )
             if new_id and hasattr(db, "set_email_auth_status"):
                 db.set_email_auth_status(new_id, "ok", None)

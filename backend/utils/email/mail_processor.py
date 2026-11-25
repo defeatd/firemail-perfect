@@ -5,21 +5,13 @@
 
 from datetime import datetime
 from email.message import Message
-from typing import Dict, List, Optional, Callable, Any, Tuple, Union
+from typing import Dict, List, Optional, Callable
 import threading
-import logging
 import time
 import traceback
 import concurrent.futures
-import queue
 
 from .common import (
-    decode_mime_words,
-    strip_html,
-    safe_decode,
-    remove_extra_blank_lines,
-    parse_email_date,
-    decode_email_content,
     parse_email_message,
     extract_email_content,
     normalize_check_time
@@ -29,12 +21,11 @@ from .logger import (
     log_email_start,
     log_email_complete,
     log_email_error,
-    log_message_processing,
-    log_message_error,
     log_progress,
     timing_decorator
 )
-from .outlook import OutlookMailHandler, OutlookTokenKeeper
+from .outlook import OutlookMailHandler
+from .token_service import OutlookTokenKeeper, get_token_service
 from .imap import IMAPMailHandler
 from .gmail import GmailHandler
 from .qq import QQMailHandler
@@ -188,8 +179,9 @@ class EmailBatchProcessor:
         # 创建实时检查器
         self.real_time_checker = RealTimeChecker(db, self)
 
-        # Outlook OAuth 令牌后台自动续期（access 过期 / refresh 轮换）
-        self.token_keeper = OutlookTokenKeeper(db)
+        # Outlook OAuth 令牌生命周期服务与独立保活调度器
+        self.token_service = get_token_service(db)
+        self.token_keeper = OutlookTokenKeeper(db, self.token_service)
 
         # 邮箱类型处理器映射
         self.handlers = {
@@ -201,14 +193,23 @@ class EmailBatchProcessor:
 
     def __del__(self):
         """析构函数，确保线程池被正确关闭"""
-        self.stop_real_time_check()
         try:
-            if getattr(self, 'token_keeper', None):
-                self.token_keeper.stop()
+            checker = getattr(self, 'real_time_checker', None)
+            if checker and getattr(checker, 'running', False):
+                self.stop_real_time_check()
         except Exception:
             pass
-        self.manual_thread_pool.shutdown(wait=True)
-        self.realtime_thread_pool.shutdown(wait=True)
+        try:
+            keeper = getattr(self, 'token_keeper', None)
+            if keeper and getattr(keeper, 'running', False):
+                keeper.stop()
+        except Exception:
+            pass
+        try:
+            self.manual_thread_pool.shutdown(wait=False)
+            self.realtime_thread_pool.shutdown(wait=False)
+        except Exception:
+            pass
 
     def is_email_being_processed(self, email_id: int) -> bool:
         """检查邮箱是否正在处理中"""
@@ -315,10 +316,40 @@ class EmailBatchProcessor:
             mail_type = email_info.get('mail_type', '')
 
             if mail_type == 'outlook':
-                # 处理Outlook邮箱：刷新 token（含轮换）+ IMAP 多主机 + AUTH 失败再刷
-                refresh_token = email_info.get('refresh_token')
-                client_id = email_info.get('client_id')
-                client_secret = email_info.get('client_secret')
+                # 先读数据库状态：need_reauth / banned 账号直接短路，不再请求微软
+                state = (
+                    self.db.get_outlook_token_state(email_id)
+                    if hasattr(self.db, 'get_outlook_token_state')
+                    else None
+                )
+                if state:
+                    auth_status = (state.get('auth_status') or 'ok').lower()
+                    if auth_status == 'pending':
+                        pending_msg = "账号首验中，请稍候"
+                        if callback:
+                            callback(0, pending_msg)
+                        return {
+                            'success': False,
+                            'message': pending_msg,
+                            'pending': True,
+                        }
+                    if auth_status in ('need_reauth', 'banned'):
+                        error_msg = (
+                            "账号已被封禁，已跳过收信"
+                            if auth_status == 'banned'
+                            else "账号需要重新授权，已跳过收信"
+                        )
+                        if callback:
+                            callback(0, error_msg)
+                        return {
+                            'success': False,
+                            'message': error_msg,
+                            'need_reauth': True,
+                            'error_code': auth_status,
+                        }
+
+                refresh_token = (state.get('refresh_token') if state else None) or email_info.get('refresh_token')
+                client_id = (state.get('client_id') if state else None) or email_info.get('client_id')
 
                 if not refresh_token or not client_id:
                     error_msg = "缺少OAuth2.0认证信息"
@@ -329,47 +360,37 @@ class EmailBatchProcessor:
                     return {'success': False, 'message': error_msg, 'need_reauth': True}
 
                 try:
-                    token_result = OutlookMailHandler.refresh_access_token(
-                        refresh_token, client_id, client_secret=client_secret
-                    )
-                    OutlookMailHandler.persist_token_result(self.db, email_id, token_result)
-
-                    if not token_result.get('success'):
+                    res = self.token_service.get_access_token(email_id, trigger='fetch')
+                    if not res.success or not res.access_token:
                         error_msg = (
                             f"获取访问令牌失败: "
-                            f"{token_result.get('error') or token_result.get('error_code') or '未知错误'}"
+                            f"{res.error or res.error_code or '未知错误'}"
                         )
-                        if token_result.get('need_reauth'):
+                        if res.need_reauth:
                             error_msg += "（需要重新导入 refresh_token / 重新授权）"
                         if callback:
                             callback(0, error_msg)
                         return {
                             'success': False,
                             'message': error_msg,
-                            'need_reauth': bool(token_result.get('need_reauth')),
-                            'error_code': token_result.get('error_code'),
+                            'need_reauth': bool(res.need_reauth),
+                            'error_code': res.error_code,
+                            'error_kind': res.error_kind,
                         }
 
-                    access_token = token_result['access_token']
+                    access_token = res.access_token
                     email_info['access_token'] = access_token
-                    email_info['refresh_token'] = (
-                        token_result.get('refresh_token') or refresh_token
-                    )
 
                     log_email_start(email_info['email'], email_id)
 
                     def token_refresher():
-                        """IMAP AUTH 失败时再刷新一次"""
-                        latest = email_info.get('refresh_token') or refresh_token
-                        result = OutlookMailHandler.refresh_access_token(
-                            latest, client_id, client_secret=client_secret
+                        """IMAP AUTH 失败时强制通过 TokenService 刷新一次"""
+                        r = self.token_service.get_access_token(
+                            email_id, force_refresh=True, trigger='fetch'
                         )
-                        OutlookMailHandler.persist_token_result(self.db, email_id, result)
-                        if result.get('success') and result.get('access_token'):
-                            email_info['access_token'] = result['access_token']
-                            if result.get('refresh_token'):
-                                email_info['refresh_token'] = result['refresh_token']
-                            return result['access_token']
+                        if r.success and r.access_token:
+                            email_info['access_token'] = r.access_token
+                            return r.access_token
                         return None
 
                     mail_records = OutlookMailHandler.fetch_emails(
@@ -379,6 +400,7 @@ class EmailBatchProcessor:
                         callback=callback,
                         last_check_time=last_check_time,
                         token_refresher=token_refresher,
+                        channel=res.channel,
                     )
 
                     if not mail_records:
@@ -489,26 +511,32 @@ class EmailBatchProcessor:
                 logger.error(f"释放邮箱处理资源失败: {str(e)}")
 
     def start_real_time_check(self, check_interval=60):
-        """启动实时邮件检查，并同步启动 Outlook Token 自动续期"""
-        started = self.real_time_checker.start(check_interval)
-        try:
-            self.token_keeper.start()
-        except Exception as e:
-            logger.error(f"启动 Outlook Token 自动续期失败: {e}")
-        return started
+        """启动实时邮件检查（与 Outlook Token 保活器解耦）"""
+        return self.real_time_checker.start(check_interval)
 
     def stop_real_time_check(self):
-        """停止实时邮件检查与 Token 自动续期"""
-        try:
-            if getattr(self, 'token_keeper', None):
-                self.token_keeper.stop()
-        except Exception as e:
-            logger.error(f"停止 Outlook Token 自动续期失败: {e}")
+        """停止实时邮件检查（不影响 Outlook Token 保活器持续运行）"""
         return self.real_time_checker.stop()
+
+    def start_token_keeper(self) -> bool:
+        """独立启动 Outlook Token 主动保活调度器"""
+        return self.token_keeper.start()
+
+    def stop_token_keeper(self) -> bool:
+        """独立停止 Outlook Token 主动保活调度器"""
+        return self.token_keeper.stop()
 
     def refresh_outlook_token(self, email_id: int) -> Dict:
         """立即刷新指定 Outlook 邮箱的 OAuth token"""
         return self.token_keeper.refresh_one(email_id)
+
+    def batch_refresh_outlook_tokens(
+        self, email_ids: List[int], *, include_invalid: bool = False
+    ) -> int:
+        """异步批量保活指定 Outlook 邮箱，返回入队数量"""
+        return self.token_keeper.submit_batch(
+            email_ids, include_invalid=include_invalid
+        )
 
     # 将旧的_real_time_check_loop方法保留但标记为已弃用
     def _real_time_check_loop(self, check_interval):
